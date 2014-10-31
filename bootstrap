@@ -1,0 +1,27 @@
+#!/bin/sh
+#
+# This file is distributed under the terms of the MIT License.
+# See the LICENSE file at the top of this tree, or if it is missing a copy can
+# be found at http://opensource.org/licenses/MIT
+#
+# Bootstrap the build tools
+# Run in the root directory of the project
+
+echo "Bootstraping..."
+aclocal=aclocal
+libtoolize=libtoolize
+[ $(uname -s) = 'Darwin' ] && libtoolize=glibtoolize
+
+set -e
+mkdir -p build-aux
+echo "-- aclocal"
+aclocal -I $aclocal --install
+echo "-- libtoolize"
+$libtoolize
+echo "-- autoconf"
+autoconf
+echo "-- autoheader"
+autoheader
+echo "-- automake"
+automake --add-missing
+touch configure

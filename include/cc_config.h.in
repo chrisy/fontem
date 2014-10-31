@@ -1,0 +1,27 @@
+/**
+ * vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+ * \file include/cc_config.h
+ *
+ * This file is distributed under the terms of the MIT License.
+ * See the LICENSE file at the top of this tree, or if it is missing a copy can
+ * be found at http://opensource.org/licenses/MIT
+ */
+
+#ifndef CC_CONFIG_H
+#define CC_CONFIG_H
+
+/* Set the CC_INLINE macro */
+#ifdef __cplusplus
+# define CC_INLINE inline
+#else
+# define CC_INLINE @cc_inline@
+#endif
+
+/* Setup our NOINLINE macro */
+#ifdef __GNUC__
+# define CC_NOINLINE __attribute__ ((noinline))
+#else
+# define CC_NOINLINE
+#endif
+
+#endif /* CC_CONFIG_H */
