@@ -21,7 +21,7 @@ struct font {
 	int		size;           //* Point size of the font */
 	int		dpi;            //* Resolution of the font */
 	int		count;          //* Number of glyphs */
-	struct glyph	glyphs[];       /** Font glyphs */
+	struct glyph	**glyphs;       /** Font glyphs */
 };
 
 #endif /* _FONTEM_H */
