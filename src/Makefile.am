@@ -9,6 +9,6 @@ bin_PROGRAMS = fontem
 sources = \
 	fontem.c
 
-fontem_LDADD = -lfreetype6
+#fontem_LDADD = -lfreetype
 fontem_SOURCES = $(sources)
 

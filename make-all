@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# This file is distributed under the terms of the MIT License.
+# See the LICENSE file at the top of this tree, or if it is missing a copy can
+# be found at http://opensource.org/licenses/MIT
+#
+# Make everything
+
+dir=$(dirname $0)
+cd "${dir}"
+
+MAKE=make
+which gmake >/dev/null 2>&1 && MAKE=gmake
+export MAKE
+
+do_bootstrap=
+
+if [ -f configure ]; then
+	if find . -type f '(' -name 'Makefile.*' -or -name 'configure.*' -or -name '*.in' ')' -newer configure | grep -q "."; then
+		do_bootstrap=y
+	fi
+else
+	do_bootstrap=y
+fi
+if [ "$do_bootstrap" ]; then
+	./bootstrap
+	./do-configure-debug
+	$MAKE clean
+fi
+
+exec $MAKE

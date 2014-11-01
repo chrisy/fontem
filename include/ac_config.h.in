@@ -9,6 +9,12 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define to 1 if you have the `freetype' library (-lfreetype). */
+#undef HAVE_LIBFREETYPE
+
+/* Define to 1 if you have the `popt' library (-lpopt). */
+#undef HAVE_LIBPOPT
+
 /* Define to 1 if you have the <math.h> header file. */
 #undef HAVE_MATH_H
 

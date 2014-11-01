@@ -17,7 +17,7 @@ EXTRA_DIST = README LICENSE \
 
 # Uncrustify the source
 uncrustify: amlocal/uncrustify.cfg
-	@for dir in $(sources); do \
+	@for dir in $(sources) src/resource; do \
 		find "$(top_srcdir)/$$dir" -type f -name '*.[ch]' -print0 | \
 			xargs -0 uncrustify -c $(top_srcdir)/amlocal/uncrustify.cfg --replace --no-backup; \
 	done

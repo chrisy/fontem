@@ -30,3 +30,4 @@ include/stamp-h1
 *.tar.gz
 doc/*.tag
 doc/html
+src/fontem

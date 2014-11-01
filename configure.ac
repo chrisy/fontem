@@ -37,6 +37,10 @@ fi
 # Compiler flags
 AX_CFLAGS_GCC_OPTION([-pipe])
 
+# Libraries
+AC_CHECK_LIB([popt], [poptGetContext], [], [AC_MSG_FAILURE([could not find libpopt])])
+AC_CHECK_LIB([freetype], [FT_Init_FreeType], [], [AC_MSG_FAILURE([cannot find FT_Init_FreeType in libfreetype])])
+
 # Library functions
 AC_CHECK_FUNCS([memcpy strdup strndup])
 
@@ -91,6 +95,7 @@ if test x"${bdir}" = x'.' ; then
     bdir=$(pwd)
 fi
 #CPPFLAGS="$CPPFLAGS -I${bdir}/include"
+CPPFLAGS="$CPPFLAGS -I/usr/include/freetype2"
 
 # Display the summary
 CC=`echo $CC | sed -e 's/  / /g'`
