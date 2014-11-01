@@ -27,7 +27,7 @@ void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c);
 
 int main(int argc, const char *argv[])
 {
-	int error;
+	int len, error;
 
 	char *font_filename = NULL;
 	char *char_list = DEFAULT_CHAR_LIST;
@@ -63,14 +63,13 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
-	char *c_name = malloc(strlen(output_name) + 3);
-	strcpy(c_name, output_name);
-	strcat(c_name, ".c");
+	len = strlen(output_name) + 16;
+	char *c_name = malloc(len);
+	snprintf(c_name, len, "font-%s-%d.c", output_name, font_size);
 	FILE *c = fopen(c_name, "w");
 
-	char *h_name = malloc(strlen(output_name) + 3);
-	strcpy(h_name, output_name);
-	strcat(h_name, ".h");
+	char *h_name = malloc(len);
+	snprintf(h_name, len, "font-%s-%d.h", output_name, font_size);
 	FILE *h = fopen(h_name, "w");
 
 	// Initial output in the .c file
@@ -115,7 +114,7 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
-	int len = strlen(char_list);
+	len = strlen(char_list);
 	for (int i = 0; i < len; i++) {
 		int ch = char_list[i];
 
