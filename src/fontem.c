@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include <popt.h>
 
@@ -32,6 +33,7 @@ int main(int argc, const char *argv[])
 	char *font_filename = NULL;
 	char *char_list = DEFAULT_CHAR_LIST;
 	char *output_name = NULL;
+	char *output_dir = ".";
 	int font_size = 10;
 
 	struct poptOption opts[] = {
@@ -39,6 +41,7 @@ int main(int argc, const char *argv[])
 		{ "size",  's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,    &font_size,     1, "Font size",			   "integer" },
 		{ "chars", 'c', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &char_list,     1, "List of characters to produce",   "string"  },
 		{ "name",  'n', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_name,   1, "Output name (without extension)", "file"    },
+		{ "dir",   'd', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_dir,    1, "Output directory",		   "dir"     },
 		POPT_AUTOHELP
 		POPT_TABLEEND
 	};
@@ -63,14 +66,24 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
-	len = strlen(output_name) + 16;
+	len = strlen(output_dir) + strlen(output_name) + 32;
 	char *c_name = malloc(len);
-	snprintf(c_name, len, "font-%s-%d.c", output_name, font_size);
+	snprintf(c_name, len, "%s/font-%s-%d.c", output_dir, output_name, font_size);
 	FILE *c = fopen(c_name, "w");
+	if (c == NULL) {
+		fprintf(stderr, "ERROR: Can't open '%s' for writing: %s\n",
+			c_name, strerror(errno));
+		return 1;
+	}
 
 	char *h_name = malloc(len);
-	snprintf(h_name, len, "font-%s-%d.h", output_name, font_size);
+	snprintf(h_name, len, "%s/font-%s-%d.h", output_dir, output_name, font_size);
 	FILE *h = fopen(h_name, "w");
+	if (h == NULL) {
+		fprintf(stderr, "ERROR: Can't open '%s' for writing: %s\n",
+			h_name, strerror(errno));
+		return 1;
+	}
 
 	// Initial output in the .c file
 	fprintf(c, "%s",
