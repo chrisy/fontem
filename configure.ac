@@ -38,6 +38,12 @@ fi
 AX_CFLAGS_GCC_OPTION([-pipe])
 
 # Libraries
+if test -d /usr/local/lib; then
+  LDFLAGS="$LDFLAGS -L/opt/local/lib"
+fi
+if test -d /opt/local/lib; then
+  LDFLAGS="$LDFLAGS -L/opt/local/lib"
+fi
 AC_CHECK_LIB([popt], [poptGetContext], [], [AC_MSG_FAILURE([could not find libpopt])])
 AC_CHECK_LIB([freetype], [FT_Init_FreeType], [], [AC_MSG_FAILURE([cannot find FT_Init_FreeType in libfreetype])])
 
@@ -95,7 +101,21 @@ if test x"${bdir}" = x'.' ; then
     bdir=$(pwd)
 fi
 #CPPFLAGS="$CPPFLAGS -I${bdir}/include"
-CPPFLAGS="$CPPFLAGS -I/usr/include/freetype2"
+if test -d /usr/local/include; then
+    CPPFLAGS="$CPPFLAGS -I/usr/local/include"
+fi
+if test -d /opt/local/include; then
+    CPPFLAGS="$CPPFLAGS -I/opt/local/include"
+fi
+if test -d /usr/include/freetype2; then
+    CPPFLAGS="$CPPFLAGS -I/usr/include/freetype2"
+fi
+if test -d /usr/local/include/freetype2; then
+    CPPFLAGS="$CPPFLAGS -I/usr/local/include/freetype2"
+fi
+if test -d /opt/local/include/freetype2; then
+    CPPFLAGS="$CPPFLAGS -I/opt/local/include/freetype2"
+fi
 
 # Display the summary
 CC=`echo $CC | sed -e 's/  / /g'`
