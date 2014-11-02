@@ -10,6 +10,7 @@
 struct glyph {
 	int		left;           //* Offset of the left edge of the glyph */
 	int		top;            //* Offset of the top edge of the glyph */
+	int		advance;        //* Horizonal offset when advancing to the next glyph */
 
 	int		cols;           //* Width of the bitmap */
 	int		rows;           //* Height of the bitmap */

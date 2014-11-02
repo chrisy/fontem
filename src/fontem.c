@@ -111,7 +111,7 @@ int main(int argc, const char *argv[])
 		" * be found at http://opensource.org/licenses/MIT\n"
 		" */\n\n");
 	fprintf(h, "#ifndef _FONTEM_%s_%d_H\n#define _FONTEM_%s_%d_H\n\n",
-			output_name, font_size, output_name, font_size);
+		output_name, font_size, output_name, font_size);
 	fprintf(h, "#include \"fontem.h\"\n\n");
 
 	// Init the font library
@@ -174,7 +174,7 @@ int main(int argc, const char *argv[])
 		"name", font_size, FONT_DPI,
 		post_count, output_name, font_size);
 
-	// Add the reference to the .h 
+	// Add the reference to the .h
 	fprintf(h, "extern struct font font_%s_%d;\n\n", output_name, font_size);
 
 	// All done!
@@ -214,6 +214,7 @@ void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, 
 	fprintf(c, "static struct glyph %s = {  /* '%c' */\n", gname, ch);
 	fprintf(c, "\t.left = %d,\n", glyph->bitmap_left);
 	fprintf(c, "\t.top = %d,\n", glyph->bitmap_top);
+	fprintf(c, "\t.advance = %d,\n", (int)glyph->advance.x);
 	fprintf(c, "\t.cols = %d,\n", bitmap->width);
 	fprintf(c, "\t.rows = %d,\n", bitmap->rows);
 	fprintf(c, "\t.bitmap = %s,\n", bname);
