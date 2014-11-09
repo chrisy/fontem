@@ -234,3 +234,5 @@ void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, 
 }
 
 // vim: set softtabstop=8 shiftwidth=8 tabstop=8:
+
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
