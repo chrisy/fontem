@@ -26,7 +26,7 @@
 /** Font library handle */
 FT_Library library;
 
-void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, char **post, int *post_len, int *post_count);
+void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, char **post, int *post_len, int *post_count, int with_kerning, char *char_list);
 
 int main(int argc, const char *argv[])
 {
@@ -68,6 +68,31 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
+	// Init the font library
+	error = FT_Init_FreeType(&library);
+	if (error) {
+		fprintf(stderr, "ERROR: Can't initialize FreeType.\n");
+		return 1;
+	}
+
+	// Load the font
+	FT_Face face;
+	error = FT_New_Face(library, font_filename, 0, &face);
+	if (error) {
+		fprintf(stderr, "ERROR: Can't load '%s'.\n", font_filename);
+		return 1;
+	}
+
+	// Set the size
+	error = FT_Set_Char_Size(face, font_size * 64, 0, FONT_DPI, 0);
+	if (error) {
+		fprintf(stderr, "ERROR: Can't set the font size to %d", font_size);
+		return 1;
+	}
+
+	char *font_name = face->family_name;
+
+	// Open the output files
 	len = strlen(output_dir) + strlen(output_name) + 32;
 	char *c_name = malloc(len);
 	snprintf(c_name, len, "%s/font-%s-%d.c", output_dir, output_name, font_size);
@@ -115,29 +140,6 @@ int main(int argc, const char *argv[])
 		output_name, font_size, output_name, font_size);
 	fprintf(h, "#include \"fontem.h\"\n\n");
 
-	// Init the font library
-	error = FT_Init_FreeType(&library);
-	if (error) {
-		fprintf(stderr, "ERROR: Can't initialize FreeType.\n");
-		return 1;
-	}
-
-	// Load the font
-	FT_Face face;
-	error = FT_New_Face(library, font_filename, 0, &face);
-	if (error) {
-		fprintf(stderr, "ERROR: Can't load '%s'.\n", font_filename);
-		return 1;
-	}
-
-	// Set the size
-	error = FT_Set_Char_Size(face, font_size * 64, 0, FONT_DPI, 0);
-	if (error) {
-		fprintf(stderr, "ERROR: Can't set the font size to %d", font_size);
-		return 1;
-	}
-
-	char *font_name = face->family_name;
 
 	// Postamble for the c file
 	char *post = malloc(512);
@@ -149,6 +151,10 @@ int main(int argc, const char *argv[])
 	post = realloc(post, post_len + 1);
 	int post_count = 0, post_max = 0;
 
+	// Are we kerning?
+	int with_kerning = FT_HAS_KERNING(face);
+
+	// Iterate the character list and generate the bitmap for each
 	len = strlen(char_list);
 	for (int i = 0; i < len; i++) {
 		int ch = char_list[i];
@@ -161,7 +167,8 @@ int main(int argc, const char *argv[])
 			return 1;
 		}
 
-		store_glyph(face->glyph, ch, font_size, output_name, c, &post, &post_len, &post_count);
+		store_glyph(&face, face->glyph, ch, font_size, output_name, c,
+			    &post, &post_len, &post_count, with_kerning, char_list);
 	}
 
 	// Finish the post
@@ -179,12 +186,15 @@ int main(int argc, const char *argv[])
 		"\t.max = %d,\n" \
 		"\t.ascender = %d,\n" \
 		"\t.descender = %d,\n" \
+		"\t.height = %d,\n" \
 		"\t.glyphs = glyphs_%s_%d,\n" \
 		"};\n\n",
 		output_name, font_size,
 		font_name, face->style_name, font_size, FONT_DPI,
 		post_count, post_max,
-		(int)face->size->metrics.ascender / 64, (int)face->size->metrics.descender / 64,
+		(int)face->size->metrics.ascender / 64,
+		(int)face->size->metrics.descender / 64,
+		(int)face->size->metrics.height / 64,
 		output_name, font_size);
 
 	// Add the reference to the .h
@@ -198,8 +208,10 @@ int main(int argc, const char *argv[])
 	return 0;
 }
 
-void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name,
-		 FILE *c, char **post, int *post_len, int *post_count)
+void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
+		 int ch, int size, char *name,
+		 FILE *c, char **post, int *post_len, int *post_count,
+		 int with_kerning, char *char_list)
 {
 	FT_Bitmap *bitmap = &glyph->bitmap;
 
@@ -207,10 +219,13 @@ void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name,
 	int len = strlen(name) + 24;
 	char *bname = malloc(len);
 	char *gname = malloc(len);
+	char *kname = malloc(len);
 
 	snprintf(bname, len, "bitmap_%s_%d_%04x", name, size, ch);
 	snprintf(gname, len, "glyph_%s_%d_%04x", name, size, ch);
+	snprintf(kname, len, "kerning_%s_%d_%04x", name, size, ch);
 
+	// Generate the bitmap
 	if (bitmap->rows && bitmap->width) {
 		fprintf(c, "/** Bitmap definition for character '%c'. */\n", ch);
 		fprintf(c, "static const uint8_t %s[] = {\n", bname);
@@ -226,14 +241,36 @@ void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name,
 		bname = strdup("NULL");
 	}
 
+	// Generate the kerning table
+	if (with_kerning) {
+		fprintf(c, "/** Kerning table for character '%c'. */\n", ch);
+		fprintf(c, "static const struct kerning %s[] = {\n", kname);
+		char *a = char_list;
+		while (*a) {
+			FT_Vector kern;
+			FT_Get_Kerning(*face, *a, ch, FT_KERNING_DEFAULT, &kern);
+			if (kern.x)
+				fprintf(c, "\t{ /* .left = '%c' */ %d, /* .offset = */ %d },\n",
+					*a, *a, (int)kern.x / 64);
+			a++;
+		}
+		fprintf(c, "\t{ /* .left = */ 0, /* .offset = */ 0 },\n");
+		fprintf(c, "};\n\n");
+	} else {
+		free(kname);
+		kname = strdup("NULL");
+	}
+
 	fprintf(c, "/** Glyph definition for character '%c'. */\n", ch);
 	fprintf(c, "static const struct glyph %s = {\n", gname);
+	fprintf(c, "\t.glyph = %d,\n", ch);
 	fprintf(c, "\t.left = %d,\n", glyph->bitmap_left);
 	fprintf(c, "\t.top = %d,\n", glyph->bitmap_top);
 	fprintf(c, "\t.advance = %d,\n", (int)glyph->advance.x / 64);
 	fprintf(c, "\t.cols = %d,\n", bitmap->width);
 	fprintf(c, "\t.rows = %d,\n", bitmap->rows);
 	fprintf(c, "\t.bitmap = %s,\n", bname);
+	fprintf(c, "\t.kerning = %s,\n", kname);
 	fprintf(c, "};\n\n");
 
 	// Append to the post
@@ -247,6 +284,7 @@ void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name,
 	free(str);
 	free(bname);
 	free(gname);
+	free(kname);
 }
 
 // vim: set softtabstop=8 shiftwidth=8 tabstop=8:

@@ -22,13 +22,13 @@ int main(int argc, const char *argv[])
 	char *font_name = "DejaVu Serif";
 	char *font_style = NULL;
 	int font_size = 10;
-	int width = 80;
-	int height = 20;
+	int width = -1;
+	int height = -1;
 
 	struct poptOption opts[] = {
 		{ "text",      't', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &string,     1, "String to render",	     "text"  },
 		{ "fontname",  'f', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_name,  1, "Name of the font to use",  "font"  },
-		{ "fontstyle", 'w', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_style, 1, "Style of the font to use", "style" },
+		{ "fontstyle", 'S', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_style, 1, "Style of the font to use", "style" },
 		{ "fontsize",  's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &font_size,  1, "Size of the fonr to use",  "pts"   },
 		{ "width",     'w', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &width,      1, "Canvas width",	     "chars" },
 		{ "height",    'h', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &height,     1, "Canvas height",	     "chars" },
@@ -68,14 +68,23 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
+	if (width == -1 || height == -1) {
+		int w = 0, h = 0;
+		font_calculate_box(font, &w, &h, string);
+		if (width == -1) width = w;
+		if (height == -1) height = h;
+	}
+
 	uint8_t *canvas = malloc(width * height);
 	memset(canvas, ' ', width * height);
 
 	char *p = string;
 
 	int x = 0;
+	char prev = 0;
 	while (*p) {
-		x += font_draw_glyph_L(font, x, 0, width, height, canvas, *p);
+		x += font_draw_glyph_L(font, x, 0, width, height, canvas, *p, prev);
+		prev = *p;
 		p++;
 	}
 
