@@ -11,7 +11,7 @@ fontem_sources = \
 	fontem.c
 
 libfontem_sources = \
-	fontload.c
+	fontrender.c
 
 fonttest_sources = \
 	fonttest.c
@@ -21,7 +21,7 @@ fontem_SOURCES = $(fontem_sources)
 libfontem_la_SOURCES = $(libfontem_sources)
 libfontem_la_CPPFLAGS = -Iresource $(AM_CPPFLAGS)
 
-fonttest_LDADD = -lfontem -lfonts
+fonttest_LDADD = libfontem.la libfonts.la
 fonttest_SOURCES = $(fonttest_sources)
 fonttest_CPPFLAGS = -Iresource $(AM_CPPFLAGS)
 fonttest.c: $(fontout)/font_all.h
