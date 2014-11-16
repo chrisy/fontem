@@ -24,7 +24,7 @@ libfontem_la_CPPFLAGS = -Iresource $(AM_CPPFLAGS)
 fonttest_LDADD = -lfontem -lfonts
 fonttest_SOURCES = $(fonttest_sources)
 fonttest_CPPFLAGS = -Iresource $(AM_CPPFLAGS)
-EXTRA_fonttest_DEPENDENCIES = $(fontout)/font_all.h
+fonttest.c: $(fontout)/font_all.h
 
 fontdir := $(top_srcdir)/fonts
 fontout := fonts
