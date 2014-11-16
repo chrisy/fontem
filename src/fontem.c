@@ -21,7 +21,7 @@
 	" ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"	\
 	"0123456789"
 
-#define FONT_DPI 72
+#define FONT_DPI 100
 
 /** Font library handle */
 FT_Library library;
@@ -99,6 +99,7 @@ int main(int argc, const char *argv[])
 		" * be found at http://opensource.org/licenses/MIT\n"
 		" */\n\n");
 	fprintf(c, "#include <stdio.h>\n");
+	fprintf(c, "#include <stdlib.h>\n");
 	fprintf(c, "#include \"fontem.h\"\n");
 	fprintf(c, "#include \"%s\"\n\n", h_basename);
 
@@ -146,11 +147,12 @@ int main(int argc, const char *argv[])
 		 output_name, font_size);
 	int post_len = strlen(post);
 	post = realloc(post, post_len + 1);
-	int post_count = 0;
+	int post_count = 0, post_max = 0;
 
 	len = strlen(char_list);
 	for (int i = 0; i < len; i++) {
 		int ch = char_list[i];
+		if (ch > post_max) post_max = ch;
 
 		// Load the glyph
 		error = FT_Load_Char(face, ch, FT_LOAD_RENDER);
@@ -174,11 +176,16 @@ int main(int argc, const char *argv[])
 		"\t.size = %d,\n" \
 		"\t.dpi = %d,\n" \
 		"\t.count = %d,\n" \
+		"\t.max = %d,\n" \
+		"\t.ascender = %d,\n" \
+		"\t.descender = %d,\n" \
 		"\t.glyphs = glyphs_%s_%d,\n" \
 		"};\n\n",
 		output_name, font_size,
 		font_name, face->style_name, font_size, FONT_DPI,
-		post_count, output_name, font_size);
+		post_count, post_max,
+		(int)face->size->metrics.ascender / 64, (int)face->size->metrics.descender / 64,
+		output_name, font_size);
 
 	// Add the reference to the .h
 	fprintf(h, "extern struct font font_%s_%d;\n\n", output_name, font_size);
@@ -206,7 +213,7 @@ void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name,
 
 	if (bitmap->rows && bitmap->width) {
 		fprintf(c, "/** Bitmap definition for character '%c'. */\n", ch);
-		fprintf(c, "static unsigned char %s[] = {\n", bname);
+		fprintf(c, "static uint8_t %s[] = {\n", bname);
 		for (int y = 0; y < bitmap->rows; y++) {
 			fprintf(c, "\t");
 			for (int x = 0; x < bitmap->width; x++)
@@ -223,7 +230,7 @@ void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name,
 	fprintf(c, "static struct glyph %s = {\n", gname);
 	fprintf(c, "\t.left = %d,\n", glyph->bitmap_left);
 	fprintf(c, "\t.top = %d,\n", glyph->bitmap_top);
-	fprintf(c, "\t.advance = %d,\n", (int)glyph->advance.x);
+	fprintf(c, "\t.advance = %d,\n", (int)glyph->advance.x / 64);
 	fprintf(c, "\t.cols = %d,\n", bitmap->width);
 	fprintf(c, "\t.rows = %d,\n", bitmap->rows);
 	fprintf(c, "\t.bitmap = %s,\n", bname);
@@ -243,5 +250,3 @@ void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name,
 }
 
 // vim: set softtabstop=8 shiftwidth=8 tabstop=8:
-
-// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:

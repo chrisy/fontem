@@ -20,6 +20,7 @@ include/cc_config.h.in~
 *.lo
 *.a
 *.la
+*.so
 include/Makefile
 include/stamp-h1
 *.h.in
@@ -30,4 +31,6 @@ include/stamp-h1
 *.tar.gz
 doc/*.tag
 doc/html
+src/fonts
 src/fontem
+src/fonttest
