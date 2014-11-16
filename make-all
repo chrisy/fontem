@@ -12,20 +12,34 @@ cd "${dir}"
 MAKE=make
 which gmake >/dev/null 2>&1 && MAKE=gmake
 export MAKE
+export LD_LIBRARY_PATH=
 
 do_bootstrap=
 
 if [ -f configure ]; then
+	# Find if any autotools input is newer than configure
 	if find . -type f '(' -name 'Makefile.*' -or -name 'configure.*' -or -name '*.in' ')' -newer configure | grep -q "."; then
+		echo "- autotools out of date; bootstrap required"
 		do_bootstrap=y
 	fi
+
+	# Find if any autotools output file is missing
+	outputs=$(eval $(grep ^ac_config_files= configure); echo $ac_config_files)
+	for i in ${outputs}; do
+		if [ ! -f "$i" ]; then
+			echo "- '$i' is missing; bootstrap required"
+			do_bootstrap=y
+		fi
+	done
 else
+	echo "- 'configure' is missing; bootstrap required"
 	do_bootstrap=y
 fi
-if [ "$do_bootstrap" ]; then
+
+if [ "${do_bootstrap}" ]; then
 	./bootstrap
 	./do-configure-debug
-	$MAKE clean
+	$MAKE -j4 clean
 fi
 
-exec $MAKE
+exec $MAKE -j4
