@@ -16,6 +16,13 @@
 # define DEBUG 0
 #endif
 
+/* Bit of a hack for macos - inline seems b0rked - probably
+ * something I'm doing wrong
+ */
+#if !defined __GNUC_GNU_INLINE__ && defined __clang__
+# define __GNUC_GNU_INLINE__ 1
+#endif
+
 #ifdef HAVE_CONFIG_H
 #include "ac_config.h"
 #endif
