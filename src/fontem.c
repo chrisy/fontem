@@ -142,7 +142,7 @@ int main(int argc, const char *argv[])
 	// Postamble for the c file
 	char *post = malloc(512);
 	snprintf(post, 512, "/** Glyphs table for font \"%s\". */\n" \
-		 "static struct glyph *glyphs_%s_%d[] = {\n",
+		 "static const struct glyph *glyphs_%s_%d[] = {\n",
 		 font_name,
 		 output_name, font_size);
 	int post_len = strlen(post);
@@ -170,7 +170,7 @@ int main(int argc, const char *argv[])
 	free(post);
 
 	fprintf(c, "/** Definition for font \"%s\". */\n", font_name);
-	fprintf(c, "struct font font_%s_%d = {\n" \
+	fprintf(c, "const struct font font_%s_%d = {\n"	\
 		"\t.name = \"%s\",\n" \
 		"\t.style = \"%s\",\n" \
 		"\t.size = %d,\n" \
@@ -188,7 +188,7 @@ int main(int argc, const char *argv[])
 		output_name, font_size);
 
 	// Add the reference to the .h
-	fprintf(h, "extern struct font font_%s_%d;\n\n", output_name, font_size);
+	fprintf(h, "extern const struct font font_%s_%d;\n\n", output_name, font_size);
 
 	// All done!
 	fprintf(h, "#endif /* _FONTEM_%s_%d_H */\n", output_name, font_size);
@@ -213,7 +213,7 @@ void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name,
 
 	if (bitmap->rows && bitmap->width) {
 		fprintf(c, "/** Bitmap definition for character '%c'. */\n", ch);
-		fprintf(c, "static uint8_t %s[] = {\n", bname);
+		fprintf(c, "static const uint8_t %s[] = {\n", bname);
 		for (int y = 0; y < bitmap->rows; y++) {
 			fprintf(c, "\t");
 			for (int x = 0; x < bitmap->width; x++)
@@ -227,7 +227,7 @@ void store_glyph(FT_GlyphSlotRec *glyph, int ch, int size, char *name,
 	}
 
 	fprintf(c, "/** Glyph definition for character '%c'. */\n", ch);
-	fprintf(c, "static struct glyph %s = {\n", gname);
+	fprintf(c, "static const struct glyph %s = {\n", gname);
 	fprintf(c, "\t.left = %d,\n", glyph->bitmap_left);
 	fprintf(c, "\t.top = %d,\n", glyph->bitmap_top);
 	fprintf(c, "\t.advance = %d,\n", (int)glyph->advance.x / 64);

@@ -13,18 +13,18 @@
 
 #include "fontem.h"
 
-struct glyph *font_get_glyph(struct font *font, int glyph)
+const struct glyph *font_get_glyph(const struct font *font, int glyph)
 {
 	if (glyph > font->max) return NULL;
 	return font->glyphs[glyph];
 }
 
-int font_draw_glyph_L(struct font *font,
+int font_draw_glyph_L(const struct font *font,
 		      int x, int y, int width, int height,
 		      uint8_t *buf, int glyph)
 {
 	if (font == NULL) return -1;
-	struct glyph *g = font_get_glyph(font, glyph);
+	const struct glyph *g = font_get_glyph(font, glyph);
 	if (g == NULL) return -2;
 
 	for (int row = 0; row < g->rows; row++) {

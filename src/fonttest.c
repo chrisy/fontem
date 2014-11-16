@@ -19,13 +19,20 @@
 int main(int argc, const char *argv[])
 {
 	char *string = "Test";
+	char *font_name = "DejaVu Serif";
+	char *font_style = NULL;
+	int font_size = 10;
 	int width = 80;
 	int height = 20;
 
 	struct poptOption opts[] = {
-		{ "string", 's', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &string, 1, "String to render", "text"  },
-		{ "width",  'w', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,    &width,  1, "Canvas width",     "chars" },
-		{ "height", 'h', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,    &height, 1, "Canvas height",    "chars" },
+		{ "text",      't', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &string,     1, "String to render",	     "text"  },
+		{ "fontname",  'f', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_name,  1, "Name of the font to use",  "font"  },
+		{ "fontstyle", 'w', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_style, 1, "Style of the font to use", "style" },
+		{ "fontsize",  's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &font_size,  1, "Size of the fonr to use",  "pts"   },
+		{ "width",     'w', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &width,      1, "Canvas width",	     "chars" },
+		{ "height",    'h', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &height,     1, "Canvas height",	     "chars" },
+		{ "list",      'l', 0,						 NULL,	      2, "List available fonts",     NULL    },
 		POPT_AUTOHELP
 		POPT_TABLEEND
 	};
@@ -35,6 +42,9 @@ int main(int argc, const char *argv[])
 
 	while ((rc = poptGetNextOpt(ctx)) > 0) {
 		switch (rc) {
+		case 2:
+			font_print_all(stdout);
+			exit(0);
 		}
 	}
 
@@ -45,6 +55,19 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
+	if (font_name == NULL) {
+		fprintf(stderr, "ERROR: You must specify a font name to render.\n");
+		return 1;
+	}
+
+	const struct font *font = font_find(font_name, font_style, font_size);
+
+	if (font == NULL) {
+		fprintf(stderr, "ERROR: Unable to find a font matching \"%s\" size \"%d\".\n",
+			font_name, font_size);
+		return 1;
+	}
+
 	uint8_t *canvas = malloc(width * height);
 	memset(canvas, ' ', width * height);
 
@@ -52,7 +75,7 @@ int main(int argc, const char *argv[])
 
 	int x = 0;
 	while (*p) {
-		x += font_draw_glyph_L(&font_DejaVuSerif_10, x, 0, width, height, canvas, *p);
+		x += font_draw_glyph_L(font, x, 0, width, height, canvas, *p);
 		p++;
 	}
 
