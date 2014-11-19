@@ -92,3 +92,49 @@ int font_draw_glyph_L(const struct font *font,
 
 	return g->advance + kerning_offset;
 }
+
+#define get_a(rgba) ((rgba >> 24) & 0xff)
+#define get_r(rgba) ((rgba >> 16) & 0xff)
+#define get_g(rgba) ((rgba >> 8) & 0xff)
+#define get_b(rgba) (rgba & 0xff)
+
+#define alpha_blend(in, in_alpha, out, out_alpha) \
+	(in * in_alpha + out * out_alpha * (1 - in_alpha));
+
+
+int font_draw_glyph_RGB(const struct font *font,
+			int x, int y, int width, int height,
+			uint8_t *buf, glyph_t glyph, glyph_t prev,
+			uint32_t rgb)
+{
+	if (font == NULL) return -1;
+	const struct glyph *g = font_get_glyph(font, glyph);
+	if (g == NULL) return -2;
+
+	int kerning_offset = font_get_kerning(font, prev, glyph);
+
+	for (int row = 0; row < g->rows; row++) {
+		int yofs = row + y + (font->ascender - g->top);
+
+		if (yofs < 0) continue;
+		if (yofs >= height) break;
+
+		for (int col = 0; col < g->cols; col++) {
+			int xofs = col + x + g->left + kerning_offset;
+
+			if (xofs < 0) continue;
+			if (xofs >= width) break;
+
+			uint8_t val = g->bitmap[(row * g->cols) + col];
+			uint8_t *pixel = buf + (yofs * width * 3) + (xofs * 3);
+
+			*pixel = alpha_blend(*pixel, 0x00, get_r(rgb), val);
+			pixel++;
+			*pixel = alpha_blend(*pixel, 0x00, get_g(rgb), val);
+			pixel++;
+			*pixel = alpha_blend(*pixel, 0x00, get_b(rgb), val);
+		}
+	}
+
+	return g->advance + kerning_offset;
+}
