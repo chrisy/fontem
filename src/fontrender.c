@@ -48,7 +48,7 @@ int font_calculate_box(const struct font *font,
 	for (const char *p = str; *p; p++, count++) {
 		const struct glyph *g = font_get_glyph(font, *p);
 		if (g == NULL) continue;
-		x += g->advance + font_get_kerning(font, prev, 0); //*p);
+		x += g->advance + font_get_kerning(font, prev, *p);
 		prev = *p;
 	}
 
