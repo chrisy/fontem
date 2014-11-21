@@ -15,6 +15,10 @@
 #include "fontem.h"
 #include "font_all.h"
 
+#ifndef EOL
+#define EOL "\n"
+#endif
+
 const struct font *font_find(char *name, char *style, int size)
 {
 	for (int idx = 0; fonts[idx] != NULL; idx++) {
@@ -27,7 +31,7 @@ const struct font *font_find(char *name, char *style, int size)
 
 void font_print_all(FILE *out)
 {
-	fprintf(out, "%-20s %-8s %-4s\n", "Font name", "Style", "Size");
+	fprintf(out, "%-20s %-8s %-4s" EOL, "Font name", "Style", "Size");
 	for (int idx = 0; fonts[idx] != NULL; idx++) {
 		fprintf(out, "%-20s %-8s %4d\n",
 			fonts[idx]->name,
