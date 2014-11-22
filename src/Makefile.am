@@ -12,6 +12,9 @@ fontem_sources = \
 
 libfontem_sources = \
 	fontrender.c \
+	fontrender_l.c \
+	fontrender_rgba32.c \
+	fontrender_rgb16.c \
 	fontfinder.c
 
 fonttest_sources = \
@@ -72,7 +75,7 @@ $(fontout)/font_all.c: $(fontout)/font_all.h Makefile
 	@printf "\tNULL\n" >> $@
 	@echo "};" >> $@
 
-	
+
 clean-local:
 	rm -f $(fonts_sources) $(fonts_sources:.c=.h) $(fontout)/font_all.h $(fontout)/font_all.c
 

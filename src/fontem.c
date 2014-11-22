@@ -18,7 +18,7 @@
 #include FT_FREETYPE_H
 
 #define DEFAULT_CHAR_LIST "!@#$%^&*()_+-={}|[]\\:\";'<>?,./`~" \
-	" ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" \
+	" ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"	\
 	"0123456789"
 
 #define FONT_DPI 100
@@ -172,12 +172,12 @@ int main(int argc, const char *argv[])
 	}
 
 	// Finish the post
-	fprintf(c, "%s" \
+	fprintf(c, "%s"	\
 		"};\n\n", post);
 	free(post);
 
 	fprintf(c, "/** Definition for font \"%s\". */\n", font_name);
-	fprintf(c, "const struct font font_%s_%d = {\n" \
+	fprintf(c, "const struct font font_%s_%d = {\n"	\
 		"\t.name = \"%s\",\n" \
 		"\t.style = \"%s\",\n" \
 		"\t.size = %d,\n" \
