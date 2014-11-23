@@ -31,11 +31,15 @@ const struct font *font_find(const char *name, const char *style, const int size
 
 void font_print_all(FILE *out)
 {
-	fprintf(out, "%-20s %-8s %-4s" EOL, "Font name", "Style", "Size");
+	fprintf(out, "%-20s %-8s %-6s %-6s %-6s" EOL,
+		"Font name", "Style", "Size",
+		"Vdist", "Height");
 	for (int idx = 0; fonts[idx] != NULL; idx++) {
-		fprintf(out, "%-20s %-8s %4d\n",
+		fprintf(out, "%-20s %-8s %6d %6d %6d" EOL,
 			fonts[idx]->name,
 			fonts[idx]->style,
-			fonts[idx]->size);
+			fonts[idx]->size,
+			fonts[idx]->height,
+			fonts[idx]->ascender + fonts[idx]->descender);
 	}
 }
