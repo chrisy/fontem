@@ -79,13 +79,26 @@ struct font {
 };
 
 
+/* fontrender.c */
 const struct glyph *font_get_glyph(const struct font *font, glyph_t glyph);
 int16_t font_get_kerning(const struct font *font, glyph_t left, glyph_t right);
 int font_calculate_box(const struct font *font, int *maxx, int *maxy, const char *str);
-int font_draw_glyph_L(const struct font *font, int x, int y, int width, int height, uint8_t *buf, glyph_t glyph, glyph_t prev);
-int font_draw_glyph_RGBA32(const struct font *font, int x, int y, int width, int height, uint8_t *buf, glyph_t glyph, glyph_t prev, uint32_t rgb);
-int font_draw_glyph_RGB16(const struct font *font, int x, int y, int width, int height, uint8_t *buf, glyph_t glyph, glyph_t prev, uint16_t rgb);
-const struct font *font_find(char *name, char *style, int size);
+
+/* fontrender_l.c */
+int font_draw_glyph_L(const struct font *font, int x, int y, int width, int height, uint8_t *buf, const struct glyph *g);
+int font_draw_char_L(const struct font *font, int x, int y, int width, int height, uint8_t *buf, glyph_t glyph, glyph_t prev);
+
+/* fontrender_rgba32.c */
+int font_draw_glyph_RGBA32(const struct font *font, int x, int y, int width, int height, uint8_t *buf, const struct glyph *g, uint32_t rgb);
+int font_draw_char_RGBA32(const struct font *font, int x, int y, int width, int height, uint8_t *buf, glyph_t glyph, glyph_t prev, uint32_t rgb);
+
+/* fontrender_rgb16.c */
+int font_draw_glyph_RGB16(const struct font *font, int x, int y, int width, int height, uint8_t *buf, const struct glyph *g, uint16_t rgb);
+int font_draw_char_RGB16(const struct font *font, int x, int y, int width, int height, uint8_t *buf, glyph_t glyph, glyph_t prev, uint16_t rgb);
+char *font_draw_string_RGB16(const struct font *font, int x, int y, int width, int height, uint8_t *buf, char *str, char prev, uint16_t rgb);
+
+/* fontfind.c */
+const struct font *font_find(const char *name, const char *style, const int size);
 void font_print_all(FILE *out);
 
 #endif /* _FONTEM_H */

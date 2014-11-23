@@ -19,7 +19,7 @@
 #define EOL "\n"
 #endif
 
-const struct font *font_find(char *name, char *style, int size)
+const struct font *font_find(const char *name, const char *style, const int size)
 {
 	for (int idx = 0; fonts[idx] != NULL; idx++) {
 		if (size == fonts[idx]->size && !strcasecmp(name, fonts[idx]->name))

@@ -15,14 +15,8 @@
 
 int font_draw_glyph_L(const struct font *font,
 		      int x, int y, int width, int height,
-		      uint8_t *buf, glyph_t glyph, glyph_t prev)
+		      uint8_t *buf, const struct glyph *g)
 {
-	if (font == NULL) return -1;
-	const struct glyph *g = font_get_glyph(font, glyph);
-	if (g == NULL) return -2;
-
-	int kerning_offset = font_get_kerning(font, prev, glyph);
-
 	for (int row = 0; row < g->rows; row++) {
 		int yofs = row + y + (font->ascender - g->top);
 
@@ -30,7 +24,7 @@ int font_draw_glyph_L(const struct font *font,
 		if (yofs >= height) break;
 
 		for (int col = 0; col < g->cols; col++) {
-			int xofs = col + x + g->left + kerning_offset;
+			int xofs = col + x + g->left;
 
 			if (xofs < 0) continue;
 			if (xofs >= width) break;
@@ -45,5 +39,19 @@ int font_draw_glyph_L(const struct font *font,
 		}
 	}
 
-	return g->advance + kerning_offset;
+	return g->advance;
+}
+
+int font_draw_char_L(const struct font *font,
+		     int x, int y, int width, int height,
+		     uint8_t *buf, glyph_t glyph, glyph_t prev)
+{
+	if (font == NULL) return -1;
+	const struct glyph *g = font_get_glyph(font, glyph);
+	if (g == NULL) return -2;
+
+	int kerning_offset = font_get_kerning(font, prev, glyph);
+
+	return font_draw_glyph_L(font, x + kerning_offset, y, width, height,
+				 buf, g) + kerning_offset;
 }

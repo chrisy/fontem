@@ -83,7 +83,7 @@ int main(int argc, const char *argv[])
 	int x = 0;
 	char prev = 0;
 	while (*p) {
-		x += font_draw_glyph_L(font, x, 0, width, height, canvas, *p, prev);
+		x += font_draw_char_L(font, x, 0, width, height, canvas, *p, prev);
 		prev = *p;
 		p++;
 	}
