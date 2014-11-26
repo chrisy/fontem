@@ -1,5 +1,5 @@
 /**
- * \file src/fontrender_rgv32a.c
+ * \file fontrender_rgba32.c
  *
  * This file is distributed under the terms of the MIT License.
  * See the LICENSE file at the top of this tree, or if it is missing a copy can
