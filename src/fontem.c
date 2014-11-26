@@ -25,25 +25,29 @@
 
 /** Font library handle */
 FT_Library library;
+char *section = NULL;
 
 void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, char **post, int *post_len, int *post_count, int with_kerning, char *char_list);
+static char *get_section(char *name);
+static int cmp_char(const void *p1, const void *p2);
 
 int main(int argc, const char *argv[])
 {
 	int len, error;
 
 	char *font_filename = NULL;
-	char *char_list = DEFAULT_CHAR_LIST;
+	char *char_list = strdup(DEFAULT_CHAR_LIST);
 	char *output_name = NULL;
 	char *output_dir = ".";
 	int font_size = 10;
 
 	struct poptOption opts[] = {
-		{ "font",  'f', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_filename, 1, "Font filename",		   "file"    },
-		{ "size",  's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,    &font_size,     1, "Font size",			   "integer" },
-		{ "chars", 'c', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &char_list,     1, "List of characters to produce",   "string"  },
-		{ "name",  'n', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_name,   1, "Output name (without extension)", "file"    },
-		{ "dir",   'd', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_dir,    1, "Output directory",		   "dir"     },
+		{ "font",    'f', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_filename, 1, "Font filename",		     "file"    },
+		{ "size",    's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,    &font_size,     1, "Font size",			     "integer" },
+		{ "chars",   'c', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &char_list,     1, "List of characters to produce",   "string"  },
+		{ "name",    'n', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_name,   1, "Output name (without extension)", "file"    },
+		{ "dir",     'd', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_dir,    1, "Output directory",		     "dir"     },
+		{ "section", 0,	  POPT_ARG_STRING,			       &section,       1, "Section for font data",	     "name"    },
 		POPT_AUTOHELP
 		POPT_TABLEEND
 	};
@@ -67,6 +71,9 @@ int main(int argc, const char *argv[])
 		fprintf(stderr, "ERROR: You must specify an output name.\n");
 		return 1;
 	}
+
+	// Sort the char list
+	qsort(char_list, strlen(char_list), sizeof(char), cmp_char);
 
 	// Init the font library
 	error = FT_Init_FreeType(&library);
@@ -127,6 +134,7 @@ int main(int argc, const char *argv[])
 	fprintf(c, "#include <stdlib.h>\n");
 	fprintf(c, "#include \"fontem.h\"\n");
 	fprintf(c, "#include \"%s\"\n\n", h_basename);
+	fprintf(c, "/* Character list: %s */\n\n", char_list);
 
 	// Initial output in the .h file
 	fprintf(h, "%s",
@@ -144,9 +152,9 @@ int main(int argc, const char *argv[])
 	// Postamble for the c file
 	char *post = malloc(512);
 	snprintf(post, 512, "/** Glyphs table for font \"%s\". */\n" \
-		 "static const struct glyph *glyphs_%s_%d[] = {\n",
+		 "static const struct glyph *glyphs_%s_%d[] %s= {\n",
 		 font_name,
-		 output_name, font_size);
+		 output_name, font_size, get_section(output_name));
 	int post_len = strlen(post);
 	post = realloc(post, post_len + 1);
 	int post_count = 0, post_max = 0;
@@ -177,7 +185,7 @@ int main(int argc, const char *argv[])
 	free(post);
 
 	fprintf(c, "/** Definition for font \"%s\". */\n", font_name);
-	fprintf(c, "const struct font font_%s_%d = {\n"	\
+	fprintf(c, "const struct font font_%s_%d %s= {\n"	\
 		"\t.name = \"%s\",\n" \
 		"\t.style = \"%s\",\n" \
 		"\t.size = %d,\n" \
@@ -189,7 +197,7 @@ int main(int argc, const char *argv[])
 		"\t.height = %d,\n" \
 		"\t.glyphs = glyphs_%s_%d,\n" \
 		"};\n\n",
-		output_name, font_size,
+		output_name, font_size, get_section(output_name),
 		font_name, face->style_name, font_size, FONT_DPI,
 		post_count, post_max,
 		(int)face->size->metrics.ascender / 64,
@@ -228,7 +236,7 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 	// Generate the bitmap
 	if (bitmap->rows && bitmap->width) {
 		fprintf(c, "/** Bitmap definition for character '%c'. */\n", ch);
-		fprintf(c, "static const uint8_t %s[] = {\n", bname);
+		fprintf(c, "static const uint8_t %s[] %s= {\n", bname, get_section(bname));
 		for (int y = 0; y < bitmap->rows; y++) {
 			fprintf(c, "\t");
 			for (int x = 0; x < bitmap->width; x++)
@@ -244,7 +252,7 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 	// Generate the kerning table
 	if (with_kerning) {
 		fprintf(c, "/** Kerning table for character '%c'. */\n", ch);
-		fprintf(c, "static const struct kerning %s[] = {\n", kname);
+		fprintf(c, "static const struct kerning %s[] %s= {\n", kname, get_section(kname));
 		char *a = char_list;
 		while (*a) {
 			FT_Vector kern;
@@ -262,7 +270,7 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 	}
 
 	fprintf(c, "/** Glyph definition for character '%c'. */\n", ch);
-	fprintf(c, "static const struct glyph %s = {\n", gname);
+	fprintf(c, "static const struct glyph %s %s= {\n", gname, get_section(gname));
 	fprintf(c, "\t.glyph = %d,\n", ch);
 	fprintf(c, "\t.left = %d,\n", glyph->bitmap_left);
 	fprintf(c, "\t.top = %d,\n", glyph->bitmap_top);
@@ -285,6 +293,23 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 	free(bname);
 	free(gname);
 	free(kname);
+}
+
+char *get_section(char *name)
+{
+	static char str[512];
+	static int count = 0;
+
+	if (section == NULL) return "";
+	snprintf(str, 512, "__attribute__ ((section (\"%s.%s_%04x\"))) ", section, name, count++);
+	return str;
+}
+
+int cmp_char(const void *p1, const void *p2)
+{
+	const char c1 = *(const char *)p1;
+	const char c2 = *(const char *)p2;
+	return c1 - c2;
 }
 
 // vim: set softtabstop=8 shiftwidth=8 tabstop=8:
