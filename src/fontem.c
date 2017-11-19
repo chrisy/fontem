@@ -237,9 +237,9 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 	if (bitmap->rows && bitmap->width) {
 		fprintf(c, "/** Bitmap definition for character '%c'. */\n", ch);
 		fprintf(c, "static const uint8_t %s[] %s= {\n", bname, get_section(bname));
-		for (int y = 0; y < bitmap->rows; y++) {
+		for (unsigned int y = 0; y < bitmap->rows; y++) {
 			fprintf(c, "\t");
-			for (int x = 0; x < bitmap->width; x++)
+			for (unsigned int x = 0; x < bitmap->width; x++)
 				fprintf(c, "0x%02x, ", (unsigned char)bitmap->buffer[y * bitmap->width + x]);
 			fprintf(c, "\n");
 		}
