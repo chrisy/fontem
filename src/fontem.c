@@ -309,6 +309,7 @@ int cmp_char(const void *p1, const void *p2)
 {
 	const char c1 = *(const char *)p1;
 	const char c2 = *(const char *)p2;
+
 	return c1 - c2;
 }
 
