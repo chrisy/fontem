@@ -1,6 +1,8 @@
 C Font Embedder
 ===============
 
+[![Build Status](https://travis-ci.org/chrisy/fontem.svg?branch=master)](https://travis-ci.org/chrisy/fontem)
+
 Overview
 --------
 
@@ -37,10 +39,12 @@ Example usage
             --size=10 --name=ubuntumono --dir=fonts
 ```
 
-This will generate two files, `fonts/font-ubuntumono-10.c` and `fonts/font-
-ubuntumono-10.h`. To use them, you will need to copy `src/resource/fontem.h`
-to the `fonts` directory. Examples of these files may be found in the
-`examples` directory of this repository.
+This will generate two files, `fonts/font-ubuntumono-10.c` and
+`fonts/font-ubuntumono-10.h`.
+
+To use them, you will need to copy `src/resource/fontem.h` to the `fonts`
+directory. Examples of these files may be found in the `examples` directory of
+this repository.
 
 The `.c` file contains descriptions of each character (glyph) that was
 translated. At the end there is a lookup table mapping the glyphs to their
