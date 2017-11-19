@@ -79,3 +79,5 @@ $(fontout)/font_all.c: $(fontout)/font_all.h Makefile
 clean-local:
 	rm -f $(fonts_sources) $(fonts_sources:.c=.h) $(fontout)/font_all.h $(fontout)/font_all.c
 
+distclean-local:
+	rm -f Makefile.in

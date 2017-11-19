@@ -26,3 +26,6 @@ LIBTOOL_DEPS = @LIBTOOL_DEPS@
 libtool: $(LIBTOOL_DEPS)
 	$(SHELL) ./config.status --recheck
 
+distclean-local:
+	rm -f Makefile.in aclocal.m4 configure
+	rm -rf autom4te.cache build-aux

@@ -13,6 +13,7 @@ MAKE=make
 which gmake >/dev/null 2>&1 && MAKE=gmake
 export MAKE
 export LD_LIBRARY_PATH=
+MAKE_PARALLEL=-j4
 
 do_bootstrap=
 
@@ -37,9 +38,10 @@ else
 fi
 
 if [ "${do_bootstrap}" ]; then
+	[ -f Makefile ] && $MAKE $MAKE_PARALLEL clean
 	./bootstrap
 	./do-configure-debug
-	$MAKE -j4 clean
+	$MAKE $MAKE_PARALLEL clean
 fi
 
-exec $MAKE -j4
+exec $MAKE $MAKE_PARALLEL

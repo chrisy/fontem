@@ -6,3 +6,6 @@
 
 include_HEADERS = config.h
 nodist_include_HEADERS = ac_config.h cc_config.h
+
+distclean-local:
+	rm -f Makefile.in ac_config.h.in* cc_config.h.in~
