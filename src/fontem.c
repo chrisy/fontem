@@ -6,6 +6,7 @@
  * be found at http://opensource.org/licenses/MIT
  */
 
+#include <ctype.h>
 #include <config.h>
 #include <errno.h>
 #include <locale.h>
@@ -38,6 +39,23 @@ static char * mb(wchar_t wchar)
 	int mb_len = wctomb(ch_mb, wchar);
 	ch_mb[mb_len] = '\0';
 	return ch_mb;
+}
+
+static char * validate_identifier(const char * identifier)
+{
+	char * result = strdup(identifier);
+	for (char * i = result; *i; i++)
+	{
+		if (isdigit(*i) && (i == result))
+			*i = '_';
+#ifndef __GNUC__
+		else if (*i == '$')
+			*i = '_';
+#endif
+		else if (!isalnum(*i))
+			*i = '_';
+	}
+	return result;
 }
 
 int main(int argc, const char *argv[])
@@ -140,6 +158,9 @@ int main(int argc, const char *argv[])
 	char *h_basename = strrchr(h_name, '/');
 	if (h_basename == NULL) h_basename = h_name;
 	else h_basename++;
+    
+	// Fix output name for begin C identifier
+	char * output_name_c = validate_identifier(output_name);
 
 	// Initial output in the .c file
 	fprintf(c, "%s",
@@ -164,7 +185,7 @@ int main(int argc, const char *argv[])
 		" * be found at http://opensource.org/licenses/MIT\n"
 		" */\n\n");
 	fprintf(h, "#ifndef _FONTEM_%s_%d_H\n#define _FONTEM_%s_%d_H\n\n",
-		output_name, font_size, output_name, font_size);
+		output_name_c, font_size, output_name_c, font_size);
 	fprintf(h, "#include \"fontem.h\"\n\n");
 
 
@@ -172,8 +193,7 @@ int main(int argc, const char *argv[])
 	char *post = malloc(512);
 	snprintf(post, 512, "/** Glyphs table for font \"%s\". */\n" \
 		 "static const struct glyph *glyphs_%s_%d[] %s= {\n",
-		 font_name,
-		 output_name, font_size, get_section(output_name));
+		 font_name, output_name_c, font_size, get_section(output_name_c));
 	int post_len = strlen(post);
 	post = realloc(post, post_len + 1);
 	int post_count = 0;
@@ -195,7 +215,7 @@ int main(int argc, const char *argv[])
 			return 1;
 		}
 
-		store_glyph(&face, face->glyph, ch, font_size, output_name, c,
+		store_glyph(&face, face->glyph, ch, font_size, output_name_c, c,
 			    &post, &post_len, &post_count, with_kerning, wide_char_list);
 	}
 
@@ -217,19 +237,20 @@ int main(int argc, const char *argv[])
 		"\t.height = %d,\n" \
 		"\t.glyphs = glyphs_%s_%d,\n" \
 		"};\n\n",
-		output_name, font_size, get_section(output_name),
+		output_name_c, font_size, get_section(output_name_c),
 		font_name, face->style_name, font_size, FONT_DPI,
 		post_count, post_max,
 		(int)face->size->metrics.ascender / 64,
 		(int)face->size->metrics.descender / 64,
 		(int)face->size->metrics.height / 64,
-		output_name, font_size);
+		output_name_c, font_size);
 
 	// Add the reference to the .h
-	fprintf(h, "extern const struct font font_%s_%d;\n\n", output_name, font_size);
+	fprintf(h, "extern const struct font font_%s_%d;\n\n", output_name_c, font_size);
 
 	// All done!
-	fprintf(h, "#endif /* _FONTEM_%s_%d_H */\n", output_name, font_size);
+	fprintf(h, "#endif /* _FONTEM_%s_%d_H */\n", output_name_c, font_size);
+	free(output_name_c);
 	fclose(h);
 	fclose(c);
 
