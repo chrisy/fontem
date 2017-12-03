@@ -8,19 +8,20 @@
 
 #include <ctype.h>
 #include <config.h>
+#include <errno.h>
+#include <locale.h>
+#include <popt.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <errno.h>
-
-#include <popt.h>
+#include <wchar.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
 #define DEFAULT_CHAR_LIST "!@#$%^&*()_+-={}|[]\\:\";'<>?,./`~" \
 	" ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"	\
-	"0123456789"
+	"0123456789" "ÄÖÜßäöü"
 
 #define FONT_DPI 100
 
@@ -28,9 +29,17 @@
 FT_Library library;
 char *section = NULL;
 
-void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, char **post, int *post_len, int *post_count, int with_kerning, char *char_list);
+void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, char **post, int *post_len, int *post_count, int with_kerning, wchar_t *char_list);
 static char *get_section(char *name);
-static int cmp_char(const void *p1, const void *p2);
+static int cmp_wchar(const void *p1, const void *p2);
+
+static char * mb(wchar_t wchar)
+{
+	static char ch_mb[16];
+	int mb_len = wctomb(ch_mb, wchar);
+	ch_mb[mb_len] = '\0';
+	return ch_mb;
+}
 
 static char * validate_identifier(const char * identifier)
 {
@@ -51,6 +60,8 @@ static char * validate_identifier(const char * identifier)
 
 int main(int argc, const char *argv[])
 {
+	setlocale(LC_ALL, "");
+	
 	int len, error;
 
 	char *font_filename = NULL;
@@ -65,7 +76,7 @@ int main(int argc, const char *argv[])
 		{ "chars",   'c', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &char_list,     1, "List of characters to produce",   "string"  },
 		{ "name",    'n', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_name,   1, "Output name (without extension)", "file"    },
 		{ "dir",     'd', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_dir,    1, "Output directory",		     "dir"     },
-		{ "section", 0,	  POPT_ARG_STRING,			       &section,       1, "Section for font data",	     "name"    },
+		{ "section", 0,	  POPT_ARG_STRING,							   &section,       1, "Section for font data",	     "name"    },
 		POPT_AUTOHELP
 		POPT_TABLEEND
 	};
@@ -90,8 +101,16 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
-	// Sort the char list
-	qsort(char_list, strlen(char_list), sizeof(char), cmp_char);
+	// Convert the char list into wide characters and sort it
+	size_t char_count = mbstowcs(NULL, char_list, 0);
+	if (char_count == (size_t)-1)
+	{
+		perror("converting char list");
+		return 1;
+	}
+	wchar_t * wide_char_list = (wchar_t *)calloc(char_count + 1, sizeof(wchar_t));
+	char_count = mbstowcs(wide_char_list, char_list, char_count + 1);
+	qsort(wide_char_list, char_count, sizeof(wchar_t), cmp_wchar);
 
 	// Init the font library
 	error = FT_Init_FreeType(&library);
@@ -177,26 +196,27 @@ int main(int argc, const char *argv[])
 		 font_name, output_name_c, font_size, get_section(output_name_c));
 	int post_len = strlen(post);
 	post = realloc(post, post_len + 1);
-	int post_count = 0, post_max = 0;
+	int post_count = 0;
+	wchar_t post_max = 0;
 
 	// Are we kerning?
 	int with_kerning = FT_HAS_KERNING(face);
 
 	// Iterate the character list and generate the bitmap for each
-	len = strlen(char_list);
-	for (int i = 0; i < len; i++) {
-		int ch = char_list[i];
-		if (ch > post_max) post_max = ch;
+	for (size_t i = 0; i < char_count; i++) {
+		wchar_t ch = wide_char_list[i];
+		if (ch > post_max)
+			post_max = ch;
 
 		// Load the glyph
 		error = FT_Load_Char(face, ch, FT_LOAD_RENDER);
 		if (error) {
-			fprintf(stderr, "ERROR : Can 't load glyph for %c.\n", ch);
+			fprintf(stderr, "ERROR : Can't load glyph for %s.\n", mb(ch));
 			return 1;
 		}
 
 		store_glyph(&face, face->glyph, ch, font_size, output_name_c, c,
-			    &post, &post_len, &post_count, with_kerning, char_list);
+			    &post, &post_len, &post_count, with_kerning, wide_char_list);
 	}
 
 	// Finish the post
@@ -238,9 +258,9 @@ int main(int argc, const char *argv[])
 }
 
 void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
-		 int ch, int size, char *name,
+		 wchar_t ch, int size, char *name,
 		 FILE *c, char **post, int *post_len, int *post_count,
-		 int with_kerning, char *char_list)
+		 int with_kerning, wchar_t *char_list)
 {
 	FT_Bitmap *bitmap = &glyph->bitmap;
 
@@ -256,7 +276,7 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 
 	// Generate the bitmap
 	if (bitmap->rows && bitmap->width) {
-		fprintf(c, "/** Bitmap definition for character '%c'. */\n", ch);
+		fprintf(c, "/** Bitmap definition for character '%s'. */\n", mb(ch));
 		fprintf(c, "static const uint8_t %s[] %s= {\n", bname, get_section(bname));
 		for (unsigned int y = 0; y < bitmap->rows; y++) {
 			fprintf(c, "\t");
@@ -272,15 +292,15 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 
 	// Generate the kerning table
 	if (with_kerning) {
-		fprintf(c, "/** Kerning table for character '%c'. */\n", ch);
+		fprintf(c, "/** Kerning table for character '%s'. */\n", mb(ch));
 		fprintf(c, "static const struct kerning %s[] %s= {\n", kname, get_section(kname));
-		char *a = char_list;
+		wchar_t *a = char_list;
 		while (*a) {
 			FT_Vector kern;
 			FT_Get_Kerning(*face, *a, ch, FT_KERNING_DEFAULT, &kern);
 			if (kern.x)
-				fprintf(c, "\t{ /* .left = '%c' */ %d, /* .offset = */ %d },\n",
-					*a, *a, (int)kern.x / 64);
+				fprintf(c, "\t{ /* .left = '%s' */ %u, /* .offset = */ %d },\n",
+					mb(*a), *a, (int)kern.x / 64);
 			a++;
 		}
 		fprintf(c, "\t{ /* .left = */ 0, /* .offset = */ 0 },\n");
@@ -290,9 +310,9 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 		kname = strdup("NULL");
 	}
 
-	fprintf(c, "/** Glyph definition for character '%c'. */\n", ch);
+	fprintf(c, "/** Glyph definition for character '%s'. */\n", mb(ch));
 	fprintf(c, "static const struct glyph %s %s= {\n", gname, get_section(gname));
-	fprintf(c, "\t.glyph = %d,\n", ch);
+	fprintf(c, "\t.glyph = %u,\n", ch);
 	fprintf(c, "\t.left = %d,\n", glyph->bitmap_left);
 	fprintf(c, "\t.top = %d,\n", glyph->bitmap_top);
 	fprintf(c, "\t.advance = %d,\n", (int)glyph->advance.x / 64);
@@ -304,7 +324,7 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 
 	// Append to the post
 	char *str = malloc(len + 100);
-	snprintf(str, len + 100, "\t[%d] = &%s,  /* '%c' */\n", ch, gname, ch);
+	snprintf(str, len + 100, "\t[%u] = &%s,  /* '%s' */\n", ch, gname, mb(ch));
 	*post = realloc(*post, (*post_len) + strlen(str) + 1);
 	strcpy((*post) + (*post_len), str);
 	(*post_len) += strlen(str);
@@ -326,12 +346,9 @@ char *get_section(char *name)
 	return str;
 }
 
-int cmp_char(const void *p1, const void *p2)
+int cmp_wchar(const void *p1, const void *p2)
 {
-	const char c1 = *(const char *)p1;
-	const char c2 = *(const char *)p2;
-
-	return c1 - c2;
+	return wcscoll(p1, p2);
 }
 
 // vim: set softtabstop=8 shiftwidth=8 tabstop=8:
