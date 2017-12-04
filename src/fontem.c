@@ -257,6 +257,23 @@ int main(int argc, const char *argv[])
 	return 0;
 }
 
+static void store_bitmap(FILE * c, FT_Bitmap * bitmap, char * bname, wchar_t ch)
+{
+	if (bitmap->rows && bitmap->width) {
+		fprintf(c, "/** Bitmap definition for character '%s'. */\n", mb(ch));
+		fprintf(c, "static const uint8_t %s[] %s= {\n", bname, get_section(bname));
+		for (unsigned int y = 0; y < bitmap->rows; y++) {
+			fprintf(c, "\t");
+			for (unsigned int x = 0; x < bitmap->width; x++)
+				fprintf(c, "0x%02x, ", (unsigned char)bitmap->buffer[y * bitmap->width + x]);
+			fprintf(c, "\n");
+		}
+		fprintf(c, "};\n\n");
+	} else {
+		strcpy(bname, "NULL");
+	}
+}
+
 void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 		 wchar_t ch, int size, char *name,
 		 FILE *c, char **post, int *post_len, int *post_count,
@@ -275,20 +292,7 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 	snprintf(kname, len, "kerning_%s_%d_%04x", name, size, ch);
 
 	// Generate the bitmap
-	if (bitmap->rows && bitmap->width) {
-		fprintf(c, "/** Bitmap definition for character '%s'. */\n", mb(ch));
-		fprintf(c, "static const uint8_t %s[] %s= {\n", bname, get_section(bname));
-		for (unsigned int y = 0; y < bitmap->rows; y++) {
-			fprintf(c, "\t");
-			for (unsigned int x = 0; x < bitmap->width; x++)
-				fprintf(c, "0x%02x, ", (unsigned char)bitmap->buffer[y * bitmap->width + x]);
-			fprintf(c, "\n");
-		}
-		fprintf(c, "};\n\n");
-	} else {
-		free(bname);
-		bname = strdup("NULL");
-	}
+	store_bitmap(c, bitmap, bname, ch);
 
 	// Generate the kerning table
 	if (with_kerning) {
