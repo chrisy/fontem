@@ -62,7 +62,7 @@ int main(int argc, const char *argv[])
 {
 	setlocale(LC_ALL, "");
 	
-	int len, error;
+	int len, error, rle = 0;
 
 	char *font_filename = NULL;
 	char *char_list = strdup(DEFAULT_CHAR_LIST);
@@ -71,12 +71,13 @@ int main(int argc, const char *argv[])
 	int font_size = 10;
 
 	struct poptOption opts[] = {
-		{ "font",    'f', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_filename, 1, "Font filename",		     "file"    },
-		{ "size",    's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,    &font_size,     1, "Font size",			     "integer" },
-		{ "chars",   'c', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &char_list,     1, "List of characters to produce",   "string"  },
-		{ "name",    'n', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_name,   1, "Output name (without extension)", "file"    },
-		{ "dir",     'd', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_dir,    1, "Output directory",		     "dir"     },
-		{ "section", 0,	  POPT_ARG_STRING,							   &section,       1, "Section for font data",	     "name"    },
+		{ "font",     'f', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_filename, 1, "Font filename",		     "file"    },
+		{ "size",     's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,    &font_size,     1, "Font size",			     "integer" },
+		{ "chars",    'c', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &char_list,     1, "List of characters to produce",   "string"  },
+		{ "name",     'n', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_name,   1, "Output name (without extension)", "file"    },
+		{ "dir",      'd', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_dir,    1, "Output directory",		     "dir"     },
+		{ "section",  0,   POPT_ARG_STRING,								&section,       1, "Section for font data",	     "name"    },
+		{ "rle",      0,   POPT_ARG_VAL,								&rle,           1, "Use RLE compression",        NULL },
 		POPT_AUTOHELP
 		POPT_TABLEEND
 	};
@@ -98,6 +99,11 @@ int main(int argc, const char *argv[])
 
 	if (output_name == NULL) {
 		fprintf(stderr, "ERROR: You must specify an output name.\n");
+		return 1;
+	}
+	
+	if (rle) {
+		fprintf(stderr, "ERROR: RLE compression is not supported yet.\n");
 		return 1;
 	}
 
