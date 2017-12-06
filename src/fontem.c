@@ -29,7 +29,7 @@
 FT_Library library;
 char *section = NULL;
 
-void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, char **post, int *post_len, int *post_count, int with_kerning, wchar_t *char_list);
+void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, char **post, int *post_len, int *post_count, int with_kerning, wchar_t *char_list, int compress);
 static char *get_section(char *name);
 static int cmp_wchar(const void *p1, const void *p2);
 
@@ -99,11 +99,6 @@ int main(int argc, const char *argv[])
 
 	if (output_name == NULL) {
 		fprintf(stderr, "ERROR: You must specify an output name.\n");
-		return 1;
-	}
-	
-	if (rle) {
-		fprintf(stderr, "ERROR: RLE compression is not supported yet.\n");
 		return 1;
 	}
 
@@ -221,8 +216,8 @@ int main(int argc, const char *argv[])
 			return 1;
 		}
 
-		store_glyph(&face, face->glyph, ch, font_size, output_name_c, c,
-			    &post, &post_len, &post_count, with_kerning, wide_char_list);
+		store_glyph(&face, face->glyph, ch, font_size, output_name_c, c, &post,
+				&post_len, &post_count, with_kerning, wide_char_list, rle);
 	}
 
 	// Finish the post
@@ -263,16 +258,65 @@ int main(int argc, const char *argv[])
 	return 0;
 }
 
-static void store_bitmap(FILE * c, FT_Bitmap * bitmap, char * bname, wchar_t ch)
+static char get_class(unsigned char c)
+{
+	if (c == 0)
+		return 1;
+	else if (c == 0xff)
+		return 2;
+	else
+		return 3;
+}
+
+static unsigned char * rle_compress(const unsigned char * data, size_t * length)
+{
+	size_t in_length = *length, out_length = 0;
+	unsigned char * result = (unsigned char *)malloc(2*in_length);
+	char class = 0, count = 0;
+	
+	for (size_t i = 0; i <= in_length; i++) {
+		unsigned char c = data[i], c_class = i == in_length ? 0 : get_class(c);
+		if (((count > 0) && (class != c_class)) || (count >= 0x40)) {
+			if (class == 3) { 
+				result[out_length++] = count - 1;
+				memcpy(result + out_length, data + i - count, count);
+				out_length += count;
+			}
+			else {
+				result[out_length++] = (class == 1 ? 0x80 : 0xc0) + count - 1;
+			}
+			count = 0;
+		}
+		class = c_class;
+		count++;
+	}
+	
+	*length = out_length;
+	return result;
+}
+
+static void store_bitmap(FILE * c, FT_Bitmap * bitmap, char * bname, wchar_t ch, int compress)
 {
 	if (bitmap->rows && bitmap->width) {
 		fprintf(c, "/** Bitmap definition for character '%s'. */\n", mb(ch));
 		fprintf(c, "static const uint8_t %s[] %s= {\n", bname, get_section(bname));
-		for (unsigned int y = 0; y < bitmap->rows; y++) {
-			fprintf(c, "\t");
-			for (unsigned int x = 0; x < bitmap->width; x++)
-				fprintf(c, "0x%02x, ", (unsigned char)bitmap->buffer[y * bitmap->width + x]);
-			fprintf(c, "\n");
+		if (compress) {
+			size_t length = bitmap->rows * bitmap->width;
+			unsigned char * compressed_data = rle_compress(bitmap->buffer, &length);
+			for (size_t i = 0; i < length; i++) {
+				fprintf(c, "0x%02x, ", compressed_data[i]);
+				if ((i % 16 == 15) || (i == length - 1))
+					fprintf(c, "\n");
+			}
+			free(compressed_data);
+		}
+		else {
+			for (unsigned int y = 0; y < bitmap->rows; y++) {
+				fprintf(c, "\t");
+				for (unsigned int x = 0; x < bitmap->width; x++)
+					fprintf(c, "0x%02x, ", (unsigned char)bitmap->buffer[y * bitmap->width + x]);
+				fprintf(c, "\n");
+			}
 		}
 		fprintf(c, "};\n\n");
 	} else {
@@ -283,7 +327,7 @@ static void store_bitmap(FILE * c, FT_Bitmap * bitmap, char * bname, wchar_t ch)
 void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 		 wchar_t ch, int size, char *name,
 		 FILE *c, char **post, int *post_len, int *post_count,
-		 int with_kerning, wchar_t *char_list)
+		 int with_kerning, wchar_t *char_list, int compress)
 {
 	FT_Bitmap *bitmap = &glyph->bitmap;
 
@@ -298,7 +342,7 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 	snprintf(kname, len, "kerning_%s_%d_%04x", name, size, ch);
 
 	// Generate the bitmap
-	store_bitmap(c, bitmap, bname, ch);
+	store_bitmap(c, bitmap, bname, ch, compress);
 
 	// Generate the kerning table
 	if (with_kerning) {
