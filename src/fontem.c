@@ -237,6 +237,7 @@ int main(int argc, const char *argv[])
 		"\t.descender = %d,\n" \
 		"\t.height = %d,\n" \
 		"\t.glyphs = glyphs_%s_%d,\n" \
+		"\t.compressed = %u,\n" \
 		"};\n\n",
 		output_name_c, font_size, get_section(output_name_c),
 		font_name, face->style_name, font_size, FONT_DPI,
@@ -244,7 +245,7 @@ int main(int argc, const char *argv[])
 		(int)face->size->metrics.ascender / 64,
 		(int)face->size->metrics.descender / 64,
 		(int)face->size->metrics.height / 64,
-		output_name_c, font_size);
+		output_name_c, font_size, rle);
 
 	// Add the reference to the .h
 	fprintf(h, "extern const struct font font_%s_%d;\n\n", output_name_c, font_size);

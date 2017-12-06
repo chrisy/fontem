@@ -76,6 +76,7 @@ struct font {
 	uint16_t		count;          /** Number of glyphs */
 	uint16_t		max;            /** Maximum glyph index */
 	const struct glyph	**glyphs;       /** Font glyphs */
+	char			compressed;
 };
 
 
