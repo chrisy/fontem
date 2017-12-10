@@ -15,33 +15,37 @@
 
 int font_draw_glyph_RGBA32(const struct font *font,
 			   int x, int y, int width, int height,
-			   uint8_t *buf, const struct glyph *g,
+			   uint8_t *buf, const struct glyph *glyph,
 			   uint32_t rgb)
 {
-	for (int row = 0; row < g->rows; row++) {
-		int yofs = row + y + (font->ascender - g->top);
+	uint8_t r = rgba32_get_r(rgb);
+	uint8_t g = rgba32_get_g(rgb);
+	uint8_t b = rgba32_get_b(rgb);
+	
+	for (int row = 0; row < glyph->rows; row++) {
+		int yofs = row + y + (font->ascender - glyph->top);
 
 		if (yofs < 0) continue;
 		if (yofs >= height) break;
 
-		for (int col = 0; col < g->cols; col++) {
-			int xofs = col + x + g->left;
+		for (int col = 0; col < glyph->cols; col++) {
+			int xofs = col + x + glyph->left;
 
 			if (xofs < 0) continue;
 			if (xofs >= width) break;
 
-			uint8_t val = g->bitmap[(row * g->cols) + col];
+			uint8_t val = glyph->bitmap[(row * glyph->cols) + col];
 			uint8_t *pixel = buf + (yofs * width * 3) + (xofs * 3);
 
-			*pixel = alpha_blend(*pixel, 0, rgba32_get_r(rgb), val);
+			*pixel = blend(*pixel, r, val);
 			pixel++;
-			*pixel = alpha_blend(*pixel, 0, rgba32_get_g(rgb), val);
+			*pixel = blend(*pixel, g, val);
 			pixel++;
-			*pixel = alpha_blend(*pixel, 0, rgba32_get_b(rgb), val);
+			*pixel = blend(*pixel, b, val);
 		}
 	}
 
-	return g->advance;
+	return glyph->advance;
 }
 
 int font_draw_char_RGBA32(const struct font *font,
