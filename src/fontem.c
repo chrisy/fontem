@@ -29,7 +29,7 @@
 FT_Library library;
 char *section = NULL;
 
-void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, char **post, int *post_len, int *post_count, int with_kerning, wchar_t *char_list);
+void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, char **post, int *post_len, int *post_count, int with_kerning, wchar_t *char_list, int compress);
 static char *get_section(char *name);
 static int cmp_wchar(const void *p1, const void *p2);
 
@@ -62,7 +62,7 @@ int main(int argc, const char *argv[])
 {
 	setlocale(LC_ALL, "");
 	
-	int len, error;
+	int len, error, rle = 0;
 
 	char *font_filename = NULL;
 	char *char_list = strdup(DEFAULT_CHAR_LIST);
@@ -71,12 +71,13 @@ int main(int argc, const char *argv[])
 	int font_size = 10;
 
 	struct poptOption opts[] = {
-		{ "font",    'f', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_filename, 1, "Font filename",		     "file"    },
-		{ "size",    's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,    &font_size,     1, "Font size",			     "integer" },
-		{ "chars",   'c', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &char_list,     1, "List of characters to produce",   "string"  },
-		{ "name",    'n', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_name,   1, "Output name (without extension)", "file"    },
-		{ "dir",     'd', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_dir,    1, "Output directory",		     "dir"     },
-		{ "section", 0,	  POPT_ARG_STRING,							   &section,       1, "Section for font data",	     "name"    },
+		{ "font",     'f', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_filename, 1, "Font filename",		     "file"    },
+		{ "size",     's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,    &font_size,     1, "Font size",			     "integer" },
+		{ "chars",    'c', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &char_list,     1, "List of characters to produce",   "string"  },
+		{ "name",     'n', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_name,   1, "Output name (without extension)", "file"    },
+		{ "dir",      'd', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_dir,    1, "Output directory",		     "dir"     },
+		{ "section",  0,   POPT_ARG_STRING,								&section,       1, "Section for font data",	     "name"    },
+		{ "rle",      0,   POPT_ARG_VAL,								&rle,           1, "Use RLE compression",        NULL },
 		POPT_AUTOHELP
 		POPT_TABLEEND
 	};
@@ -215,8 +216,8 @@ int main(int argc, const char *argv[])
 			return 1;
 		}
 
-		store_glyph(&face, face->glyph, ch, font_size, output_name_c, c,
-			    &post, &post_len, &post_count, with_kerning, wide_char_list);
+		store_glyph(&face, face->glyph, ch, font_size, output_name_c, c, &post,
+				&post_len, &post_count, with_kerning, wide_char_list, rle);
 	}
 
 	// Finish the post
@@ -236,6 +237,7 @@ int main(int argc, const char *argv[])
 		"\t.descender = %d,\n" \
 		"\t.height = %d,\n" \
 		"\t.glyphs = glyphs_%s_%d,\n" \
+		"\t.compressed = %u,\n" \
 		"};\n\n",
 		output_name_c, font_size, get_section(output_name_c),
 		font_name, face->style_name, font_size, FONT_DPI,
@@ -243,7 +245,7 @@ int main(int argc, const char *argv[])
 		(int)face->size->metrics.ascender / 64,
 		(int)face->size->metrics.descender / 64,
 		(int)face->size->metrics.height / 64,
-		output_name_c, font_size);
+		output_name_c, font_size, rle);
 
 	// Add the reference to the .h
 	fprintf(h, "extern const struct font font_%s_%d;\n\n", output_name_c, font_size);
@@ -257,10 +259,76 @@ int main(int argc, const char *argv[])
 	return 0;
 }
 
+static char get_class(unsigned char c)
+{
+	if (c == 0)
+		return 1;
+	else if (c == 0xff)
+		return 2;
+	else
+		return 3;
+}
+
+static unsigned char * rle_compress(const unsigned char * data, size_t * length)
+{
+	size_t in_length = *length, out_length = 0;
+	unsigned char * result = (unsigned char *)malloc(2*in_length);
+	char class = 0, count = 0;
+	
+	for (size_t i = 0; i <= in_length; i++) {
+		unsigned char c = data[i], c_class = i == in_length ? 0 : get_class(c);
+		if (((count > 0) && (class != c_class)) || (count >= 0x40)) {
+			if (class == 3) { 
+				result[out_length++] = count - 1;
+				memcpy(result + out_length, data + i - count, count);
+				out_length += count;
+			}
+			else {
+				result[out_length++] = (class == 1 ? 0x80 : 0xc0) + count - 1;
+			}
+			count = 0;
+		}
+		class = c_class;
+		count++;
+	}
+	
+	*length = out_length;
+	return result;
+}
+
+static void store_bitmap(FILE * c, FT_Bitmap * bitmap, char * bname, wchar_t ch, int compress)
+{
+	if (bitmap->rows && bitmap->width) {
+		fprintf(c, "/** Bitmap definition for character '%s'. */\n", mb(ch));
+		fprintf(c, "static const uint8_t %s[] %s= {\n", bname, get_section(bname));
+		if (compress) {
+			size_t length = bitmap->rows * bitmap->width;
+			unsigned char * compressed_data = rle_compress(bitmap->buffer, &length);
+			for (size_t i = 0; i < length; i++) {
+				fprintf(c, "0x%02x, ", compressed_data[i]);
+				if ((i % 16 == 15) || (i == length - 1))
+					fprintf(c, "\n");
+			}
+			free(compressed_data);
+		}
+		else {
+			for (unsigned int y = 0; y < bitmap->rows; y++) {
+				fprintf(c, "\t");
+				for (unsigned int x = 0; x < bitmap->width; x++)
+					fprintf(c, "0x%02x, ", (unsigned char)bitmap->buffer[y * bitmap->width + x]);
+				fprintf(c, "\n");
+			}
+		}
+		fprintf(c, "};\n\n");
+	} else {
+		strcpy(bname, "NULL");
+	}
+}
+
 void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 		 wchar_t ch, int size, char *name,
 		 FILE *c, char **post, int *post_len, int *post_count,
-		 int with_kerning, wchar_t *char_list)
+		 int with_kerning, wchar_t *char_list, int compress)
 {
 	FT_Bitmap *bitmap = &glyph->bitmap;
 
@@ -275,20 +343,7 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 	snprintf(kname, len, "kerning_%s_%d_%04x", name, size, ch);
 
 	// Generate the bitmap
-	if (bitmap->rows && bitmap->width) {
-		fprintf(c, "/** Bitmap definition for character '%s'. */\n", mb(ch));
-		fprintf(c, "static const uint8_t %s[] %s= {\n", bname, get_section(bname));
-		for (unsigned int y = 0; y < bitmap->rows; y++) {
-			fprintf(c, "\t");
-			for (unsigned int x = 0; x < bitmap->width; x++)
-				fprintf(c, "0x%02x, ", (unsigned char)bitmap->buffer[y * bitmap->width + x]);
-			fprintf(c, "\n");
-		}
-		fprintf(c, "};\n\n");
-	} else {
-		free(bname);
-		bname = strdup("NULL");
-	}
+	store_bitmap(c, bitmap, bname, ch, compress);
 
 	// Generate the kerning table
 	if (with_kerning) {

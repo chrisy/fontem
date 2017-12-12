@@ -15,33 +15,51 @@
 
 int font_draw_glyph_RGBA32(const struct font *font,
 			   int x, int y, int width, int height,
-			   uint8_t *buf, const struct glyph *g,
+			   uint8_t *buf, const struct glyph *glyph,
 			   uint32_t rgb)
 {
-	for (int row = 0; row < g->rows; row++) {
-		int yofs = row + y + (font->ascender - g->top);
-
-		if (yofs < 0) continue;
-		if (yofs >= height) break;
-
-		for (int col = 0; col < g->cols; col++) {
-			int xofs = col + x + g->left;
-
-			if (xofs < 0) continue;
-			if (xofs >= width) break;
-
-			uint8_t val = g->bitmap[(row * g->cols) + col];
-			uint8_t *pixel = buf + (yofs * width * 3) + (xofs * 3);
-
-			*pixel = alpha_blend(*pixel, 0, rgba32_get_r(rgb), val);
-			pixel++;
-			*pixel = alpha_blend(*pixel, 0, rgba32_get_g(rgb), val);
-			pixel++;
-			*pixel = alpha_blend(*pixel, 0, rgba32_get_b(rgb), val);
+	uint8_t r = rgba32_get_r(rgb);
+	uint8_t g = rgba32_get_g(rgb);
+	uint8_t b = rgba32_get_b(rgb);
+	
+	unsigned rows = glyph->rows, cols = glyph->cols;
+	const unsigned char * data = glyph->bitmap;
+	unsigned char count = 0, class = 0;
+	
+	for (unsigned row = 0; row < rows; row++) {
+		int yofs = row + y + (font->ascender - glyph->top);
+		
+		for (unsigned col = 0; col < cols; col++) {
+			unsigned char val = 0;
+			int xofs = col + x + glyph->left;
+			
+			if (font->compressed) {
+				if (count==0) {
+					count = (*data & 0x3f) + 1;
+					class = *(data++) >> 6;
+				}
+				
+				if (class == 0)
+					val = *(data++);
+				else if (class == 3)
+					val = 0xff;
+				count--;
+			}
+			else
+				val = data[(row * cols) + col];
+			
+			if ((yofs >= 0) && (yofs < height) && (xofs >= 0) && (xofs < width)) {
+				uint8_t *pixel = buf + (yofs * width * 3) + (xofs * 3);
+				*pixel = blend(*pixel, r, val);
+				pixel++;
+				*pixel = blend(*pixel, g, val);
+				pixel++;
+				*pixel = blend(*pixel, b, val);
+			}
 		}
 	}
-
-	return g->advance;
+	
+	return glyph->advance;
 }
 
 int font_draw_char_RGBA32(const struct font *font,

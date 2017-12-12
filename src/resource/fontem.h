@@ -13,7 +13,9 @@
 
 /** Alpha compositing "A over B" mechanism */
 #define alpha_blend(in, in_alpha, out, out_alpha) \
-	(in * in_alpha + out * out_alpha * (255 - in_alpha))
+	((0x100 * in * in_alpha * (255 - out_alpha) + out * out_alpha * (255 - in_alpha)) >> 16)
+#define blend(a, b, alpha) \
+	(((a) * (255 - (alpha)) + (b) * (alpha)) >> 8)
 
 /** Extract the Alpha channel from a 32-bit RGBA value */
 #define rgba32_get_a(rgba) ((rgba >> 24) & 0xff)
@@ -76,6 +78,7 @@ struct font {
 	uint16_t		count;          /** Number of glyphs */
 	uint16_t		max;            /** Maximum glyph index */
 	const struct glyph	**glyphs;       /** Font glyphs */
+	char			compressed;
 };
 
 
