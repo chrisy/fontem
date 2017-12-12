@@ -22,6 +22,7 @@ Command line parameters
       -c, --chars=string     List of characters to produce (default: "!@#$%^&*()_+-={}|[]\:";'<>?,./`~ ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
       -n, --name=file        Output name (without extension) (default: null)
       -d, --dir=dir          Output directory (default: ".")
+      --rle                  Use RLE compression
 
     Help options:
       -?, --help             Show this help message
