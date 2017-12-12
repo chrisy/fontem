@@ -22,56 +22,34 @@ int font_draw_glyph_RGBA32(const struct font *font,
 	uint8_t g = rgba32_get_g(rgb);
 	uint8_t b = rgba32_get_b(rgb);
 	
-	if (font->compressed) {
-		unsigned rows = glyph->rows, cols = glyph->cols;
-		const unsigned char * data = glyph->bitmap;
-		unsigned char count = 0, class = 0;
+	unsigned rows = glyph->rows, cols = glyph->cols;
+	const unsigned char * data = glyph->bitmap;
+	unsigned char count = 0, class = 0;
+	
+	for (unsigned row = 0; row < rows; row++) {
+		int yofs = row + y + (font->ascender - glyph->top);
 		
-		for (unsigned row = 0; row < rows; row++) {
-			int yofs = row + y + (font->ascender - glyph->top);
+		for (unsigned col = 0; col < cols; col++) {
+			unsigned char val = 0;
+			int xofs = col + x + glyph->left;
 			
-			for (unsigned col = 0; col < cols; col++) {
-				int xofs = col + x + glyph->left;
-				
+			if (font->compressed) {
 				if (count==0) {
 					count = (*data & 0x3f) + 1;
 					class = *(data++) >> 6;
 				}
 				
-				unsigned char val = 0;
 				if (class == 0)
 					val = *(data++);
 				else if (class == 3)
 					val = 0xff;
 				count--;
-				
-				if ((yofs >= 0) && (yofs < height) && (xofs >= 0) && (xofs < width)) {
-					uint8_t *pixel = buf + (yofs * width * 3) + (xofs * 3);
-					*pixel = blend(*pixel, r, val);
-					pixel++;
-					*pixel = blend(*pixel, g, val);
-					pixel++;
-					*pixel = blend(*pixel, b, val);
-				}
 			}
-		}
-	}
-	else {
-		for (int row = 0; row < glyph->rows; row++) {
-			int yofs = row + y + (font->ascender - glyph->top);
-
-			if (yofs < 0) continue;
-			if (yofs >= height) break;
-
-			for (int col = 0; col < glyph->cols; col++) {
-				int xofs = col + x + glyph->left;
-
-				if (xofs < 0) continue;
-				if (xofs >= width) break;
-
-				uint8_t val = glyph->bitmap[(row * glyph->cols) + col];
+			else
+				val = data[(row * cols) + col];
+			
+			if ((yofs >= 0) && (yofs < height) && (xofs >= 0) && (xofs < width)) {
 				uint8_t *pixel = buf + (yofs * width * 3) + (xofs * 3);
-
 				*pixel = blend(*pixel, r, val);
 				pixel++;
 				*pixel = blend(*pixel, g, val);
