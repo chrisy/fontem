@@ -379,7 +379,7 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 
 	// Append to the post
 	char *str = malloc(len + 100);
-	snprintf(str, len + 100, "\t&%s,  /* '%s' */\n", gname, mb(ch));
+	snprintf(str, len + 100, "\t&%s,  /* U+%04X '%s' */\n", gname, ch, mb(ch));
 	*post = realloc(*post, (*post_len) + strlen(str) + 1);
 	strcpy((*post) + (*post_len), str);
 	(*post_len) += strlen(str);
