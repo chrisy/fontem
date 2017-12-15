@@ -15,8 +15,21 @@
 
 const struct glyph *font_get_glyph(const struct font *font, glyph_t glyph)
 {
-	if (glyph > font->max) return NULL;
-	return font->glyphs[glyph];
+	if (glyph > font->max)
+		return NULL;
+	
+	size_t first = 0, last = font->count;
+	const struct glyph ** glyphs = font->glyphs;
+	
+	while (first < last) {
+		size_t mid = first + (last - first) / 2;
+		if (glyph <= glyphs[mid]->glyph)
+			last = mid;
+		else
+			first = mid + 1;
+	}
+	
+	return (last < font->count && glyphs[last]->glyph == glyph) ? *(glyphs + last) : NULL;
 }
 
 int16_t font_get_kerning(const struct font *font, glyph_t left, glyph_t right)

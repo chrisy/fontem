@@ -379,7 +379,7 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 
 	// Append to the post
 	char *str = malloc(len + 100);
-	snprintf(str, len + 100, "\t[%u] = &%s,  /* '%s' */\n", ch, gname, mb(ch));
+	snprintf(str, len + 100, "\t&%s,  /* U+%04X '%s' */\n", gname, ch, mb(ch));
 	*post = realloc(*post, (*post_len) + strlen(str) + 1);
 	strcpy((*post) + (*post_len), str);
 	(*post_len) += strlen(str);
@@ -403,7 +403,7 @@ char *get_section(char *name)
 
 int cmp_wchar(const void *p1, const void *p2)
 {
-	return wcscoll(p1, p2);
+	return *(wchar_t *)p1 - *(wchar_t *)p2;
 }
 
 // vim: set softtabstop=8 shiftwidth=8 tabstop=8:
