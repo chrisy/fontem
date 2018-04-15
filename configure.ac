@@ -138,6 +138,7 @@ AC_CONFIG_HEADER([include/ac_config.h])
 AC_CONFIG_FILES([Makefile
     include/Makefile
     include/cc_config.h
-    src/Makefile])
+    src/Makefile
+    tests/Makefile])
 AC_OUTPUT
 

@@ -23,6 +23,9 @@ uncrustify: amlocal/uncrustify.cfg
 			xargs -0 uncrustify -c $(top_srcdir)/amlocal/uncrustify.cfg --replace --no-backup; \
 	done
 
+test:
+	$(MAKE) -C tests test
+
 LIBTOOL_DEPS = @LIBTOOL_DEPS@
 libtool: $(LIBTOOL_DEPS)
 	$(SHELL) ./config.status --recheck

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+. params
+
+datadir="$1"
+
+if [ -z "${datadir}" ]; then
+	echo "ERROR: Need a data directory as \$1" >&2
+	exit 1
+fi
+
+fontlist="${datadir}/fontlist"
+"${ft}" -a > "${fontlist}"
+readarray fonts < "${fontlist}"
+
+for i in "${fonts[@]}"; do
+	md5sum=$(echo $i | md5sum | awk '{print $1}')
+	eval "${ft}" $i -t "\"${str}\"" > "${datadir}/${md5sum}"
+done

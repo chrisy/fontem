@@ -1,0 +1,32 @@
+#!/bin/bash
+
+. params
+
+datadir="$1"
+
+if [ -z "${datadir}" ]; then
+	echo "ERROR: Need a data directory as \$1" >&2
+	exit 1
+fi
+
+fontlist="${datadir}/fontlist"
+readarray fonts < "${fontlist}"
+
+tmp=$(mktemp --suffix fontem)
+cleanup() {
+	rm -f "${tmp}"
+}
+trap cleanup EXIT
+
+rc=0
+for i in "${fonts[@]}"; do
+	md5sum=$(echo $i | md5sum | awk '{print $1}')
+	eval "${ft}" $i -t "\"${str}\"" > "${tmp}"
+	cmp --quiet "${tmp}" "${datadir}/${md5sum}" || (
+		echo "ERROR: Font failed compare: $i" >&2;
+		exit 1) || rc=1
+done
+
+[ $rc = 0 ] && echo "All fonts passed compare tests."
+
+exit ${rc}

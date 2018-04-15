@@ -103,6 +103,7 @@ char *font_draw_string_RGB16(const struct font *font, int x, int y, int width, i
 /* fontfind.c */
 const struct font *font_find_all(const char *name, const char *style, const int size, const char rle);
 const struct font *font_find(const char *name, const char *style, const int size);
-void font_print_all(FILE *out);
+typedef void (*fia_fn_t)(struct font *, void *);
+void font_iterate_all(fia_fn_t fn, void *opaque);
 
 #endif /* _FONTEM_H */

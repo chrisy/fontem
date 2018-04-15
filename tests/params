@@ -1,0 +1,4 @@
+# Common values for the test scripts
+
+ft=../src/fonttest
+str="Test 0123!@_$%^&*{}"
