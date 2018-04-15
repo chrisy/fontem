@@ -1,10 +1,5 @@
 language: c
-jobs:
-  include:
-  - stage: build
-    script: ./make-all
-  - stage: test
-    script: make test
+script: ./make-all && make test
 sudo: false
 addons:
   apt:
