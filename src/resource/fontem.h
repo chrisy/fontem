@@ -78,7 +78,7 @@ struct font {
 	uint16_t		count;          /** Number of glyphs */
 	uint16_t		max;            /** Maximum glyph index */
 	const struct glyph	**glyphs;       /** Font glyphs */
-	char			compressed;
+	char			compressed;     /** TRUE if glyph bitmaps are RLE compressed */
 };
 
 
@@ -101,6 +101,7 @@ int font_draw_char_RGB16(const struct font *font, int x, int y, int width, int h
 char *font_draw_string_RGB16(const struct font *font, int x, int y, int width, int height, uint8_t *buf, char *str, char prev, uint16_t rgb);
 
 /* fontfind.c */
+const struct font *font_find_all(const char *name, const char *style, const int size, const char rle);
 const struct font *font_find(const char *name, const char *style, const int size);
 void font_print_all(FILE *out);
 

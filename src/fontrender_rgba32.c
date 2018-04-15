@@ -21,33 +21,35 @@ int font_draw_glyph_RGBA32(const struct font *font,
 	uint8_t r = rgba32_get_r(rgb);
 	uint8_t g = rgba32_get_g(rgb);
 	uint8_t b = rgba32_get_b(rgb);
-	
+
 	unsigned rows = glyph->rows, cols = glyph->cols;
-	const unsigned char * data = glyph->bitmap;
+	const unsigned char *data = glyph->bitmap;
 	unsigned char count = 0, class = 0;
-	
+
 	for (unsigned row = 0; row < rows; row++) {
 		int yofs = row + y + (font->ascender - glyph->top);
-		
+
 		for (unsigned col = 0; col < cols; col++) {
-			unsigned char val = 0;
 			int xofs = col + x + glyph->left;
-			
+
+			uint8_t val;
 			if (font->compressed) {
-				if (count==0) {
+				if (count == 0) {
 					count = (*data & 0x3f) + 1;
 					class = *(data++) >> 6;
 				}
-				
+
 				if (class == 0)
 					val = *(data++);
 				else if (class == 3)
 					val = 0xff;
+				else
+					val = 0;
 				count--;
-			}
-			else
+			} else {
 				val = data[(row * cols) + col];
-			
+			}
+
 			if ((yofs >= 0) && (yofs < height) && (xofs >= 0) && (xofs < width)) {
 				uint8_t *pixel = buf + (yofs * width * 3) + (xofs * 3);
 				*pixel = blend(*pixel, r, val);
@@ -58,7 +60,7 @@ int font_draw_glyph_RGBA32(const struct font *font,
 			}
 		}
 	}
-	
+
 	return glyph->advance;
 }
 
