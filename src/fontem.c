@@ -33,27 +33,28 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph, int ch, int size, char *
 static char *get_section(char *name);
 static int cmp_wchar(const void *p1, const void *p2);
 
-static char * mb(wchar_t wchar)
+static char *mb(wchar_t wchar)
 {
 	static char ch_mb[16];
 	int mb_len = wctomb(ch_mb, wchar);
+
 	ch_mb[mb_len] = '\0';
 	return ch_mb;
 }
 
-static char * validate_identifier(const char * identifier)
+static char *validate_identifier(const char *identifier)
 {
-	char * result = strdup(identifier);
-	for (char * i = result; *i; i++)
-	{
-		if (isdigit(*i) && (i == result))
-			*i = '_';
+	char *result = strdup(identifier);
+
+	for (char *p = result; *p; p++) {
+		if (isdigit(*p) && (p == result))
+			*p = '_';
 #ifndef __GNUC__
-		else if (*i == '$')
-			*i = '_';
+		else if (*p == '$')
+			*p = '_';
 #endif
-		else if (!isalnum(*i))
-			*i = '_';
+		else if (!isalnum(*p))
+			*p = '_';
 	}
 	return result;
 }
@@ -61,23 +62,27 @@ static char * validate_identifier(const char * identifier)
 int main(int argc, const char *argv[])
 {
 	setlocale(LC_ALL, "");
-	
-	int len, error, rle = 0;
+
+	int len, error;
+	int rle = 0;
 
 	char *font_filename = NULL;
 	char *char_list = strdup(DEFAULT_CHAR_LIST);
 	char *output_name = NULL;
 	char *output_dir = ".";
+	char *append = "";
+	char *append_sane = NULL;
 	int font_size = 10;
 
 	struct poptOption opts[] = {
-		{ "font",     'f', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_filename, 1, "Font filename",		     "file"    },
-		{ "size",     's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,    &font_size,     1, "Font size",			     "integer" },
-		{ "chars",    'c', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &char_list,     1, "List of characters to produce",   "string"  },
-		{ "name",     'n', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_name,   1, "Output name (without extension)", "file"    },
-		{ "dir",      'd', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_dir,    1, "Output directory",		     "dir"     },
-		{ "section",  0,   POPT_ARG_STRING,								&section,       1, "Section for font data",	     "name"    },
-		{ "rle",      0,   POPT_ARG_VAL,								&rle,           1, "Use RLE compression",        NULL },
+		{ "font",    'f', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_filename, 1, "Font filename",		     "file"    },
+		{ "size",    's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,    &font_size,     1, "Font size",			     "integer" },
+		{ "chars",   'c', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &char_list,     1, "List of characters to produce",   "string"  },
+		{ "name",    'n', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_name,   1, "Output name (without extension)", "file"    },
+		{ "dir",     'd', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &output_dir,    1, "Output directory",		     "dir"     },
+		{ "section", 0,	  POPT_ARG_STRING,			       &section,       1, "Section for font data",	     "name"    },
+		{ "rle",     0,	  POPT_ARG_VAL | POPT_ARGFLAG_SHOW_DEFAULT,    &rle,	       1, "Use RLE compression",	     "rle"     },
+		{ "append",  0,	  POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &append,	       1, "Append str to filename, structs", ""	       },
 		POPT_AUTOHELP
 		POPT_TABLEEND
 	};
@@ -102,14 +107,16 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
+	// Make a copy of 'append' with C-sane characters
+	append_sane = validate_identifier(append);
+
 	// Convert the char list into wide characters and sort it
 	size_t char_count = mbstowcs(NULL, char_list, 0);
-	if (char_count == (size_t)-1)
-	{
+	if (char_count == (size_t)-1) {
 		perror("converting char list");
 		return 1;
 	}
-	wchar_t * wide_char_list = (wchar_t *)calloc(char_count + 1, sizeof(wchar_t));
+	wchar_t *wide_char_list = (wchar_t *)calloc(char_count + 1, sizeof(wchar_t));
 	char_count = mbstowcs(wide_char_list, char_list, char_count + 1);
 	qsort(wide_char_list, char_count, sizeof(wchar_t), cmp_wchar);
 
@@ -140,7 +147,11 @@ int main(int argc, const char *argv[])
 	// Open the output files
 	len = strlen(output_dir) + strlen(output_name) + 32;
 	char *c_name = malloc(len);
-	snprintf(c_name, len, "%s/font-%s-%d.c", output_dir, output_name, font_size);
+	snprintf(c_name, len, "%s/font-%s-%d%s.c",
+		 output_dir,
+		 output_name,
+		 font_size,
+		 append);
 	FILE *c = fopen(c_name, "w");
 	if (c == NULL) {
 		fprintf(stderr, "ERROR: Can't open '%s' for writing: %s\n",
@@ -149,7 +160,11 @@ int main(int argc, const char *argv[])
 	}
 
 	char *h_name = malloc(len);
-	snprintf(h_name, len, "%s/font-%s-%d.h", output_dir, output_name, font_size);
+	snprintf(h_name, len, "%s/font-%s-%d%s.h",
+		 output_dir,
+		 output_name,
+		 font_size,
+		 append);
 	FILE *h = fopen(h_name, "w");
 	if (h == NULL) {
 		fprintf(stderr, "ERROR: Can't open '%s' for writing: %s\n",
@@ -159,9 +174,9 @@ int main(int argc, const char *argv[])
 	char *h_basename = strrchr(h_name, '/');
 	if (h_basename == NULL) h_basename = h_name;
 	else h_basename++;
-    
+
 	// Fix output name for begin C identifier
-	char * output_name_c = validate_identifier(output_name);
+	char *output_name_c = validate_identifier(output_name);
 
 	// Initial output in the .c file
 	fprintf(c, "%s",
@@ -185,16 +200,18 @@ int main(int argc, const char *argv[])
 		" * See the LICENSE file at the top of this tree, or if it is missing a copy can\n"
 		" * be found at http://opensource.org/licenses/MIT\n"
 		" */\n\n");
-	fprintf(h, "#ifndef _FONTEM_%s_%d_H\n#define _FONTEM_%s_%d_H\n\n",
-		output_name_c, font_size, output_name_c, font_size);
+	fprintf(h, "#ifndef _FONTEM_%s_%d%s_H\n#define _FONTEM_%s_%d%s_H\n\n",
+		output_name_c, font_size, append_sane,
+		output_name_c, font_size, append_sane);
 	fprintf(h, "#include \"fontem.h\"\n\n");
 
 
 	// Postamble for the c file
 	char *post = malloc(512);
 	snprintf(post, 512, "/** Glyphs table for font \"%s\". */\n" \
-		 "static const struct glyph *glyphs_%s_%d[] %s= {\n",
-		 font_name, output_name_c, font_size, get_section(output_name_c));
+		 "static const struct glyph *glyphs_%s_%d%s[] %s= {\n",
+		 font_name, output_name_c, font_size, append_sane,
+		 get_section(output_name_c));
 	int post_len = strlen(post);
 	post = realloc(post, post_len + 1);
 	int post_count = 0;
@@ -217,7 +234,7 @@ int main(int argc, const char *argv[])
 		}
 
 		store_glyph(&face, face->glyph, ch, font_size, output_name_c, c, &post,
-				&post_len, &post_count, with_kerning, wide_char_list, rle);
+			    &post_len, &post_count, with_kerning, wide_char_list, rle);
 	}
 
 	// Finish the post
@@ -226,7 +243,7 @@ int main(int argc, const char *argv[])
 	free(post);
 
 	fprintf(c, "/** Definition for font \"%s\". */\n", font_name);
-	fprintf(c, "const struct font font_%s_%d %s= {\n"	\
+	fprintf(c, "const struct font font_%s_%d%s %s= {\n"	\
 		"\t.name = \"%s\",\n" \
 		"\t.style = \"%s\",\n" \
 		"\t.size = %d,\n" \
@@ -236,22 +253,26 @@ int main(int argc, const char *argv[])
 		"\t.ascender = %d,\n" \
 		"\t.descender = %d,\n" \
 		"\t.height = %d,\n" \
-		"\t.glyphs = glyphs_%s_%d,\n" \
-		"\t.compressed = %u,\n" \
+		"\t.glyphs = glyphs_%s_%d%s,\n"	\
+		"\t.compressed = %u,\n"	\
 		"};\n\n",
-		output_name_c, font_size, get_section(output_name_c),
+		output_name_c, font_size, append_sane,
+		get_section(output_name_c),
 		font_name, face->style_name, font_size, FONT_DPI,
 		post_count, post_max,
 		(int)face->size->metrics.ascender / 64,
 		(int)face->size->metrics.descender / 64,
 		(int)face->size->metrics.height / 64,
-		output_name_c, font_size, rle);
+		output_name_c, font_size, append_sane,
+		rle);
 
 	// Add the reference to the .h
-	fprintf(h, "extern const struct font font_%s_%d;\n\n", output_name_c, font_size);
+	fprintf(h, "extern const struct font font_%s_%d%s;\n\n",
+		output_name_c, font_size, append_sane);
 
 	// All done!
-	fprintf(h, "#endif /* _FONTEM_%s_%d_H */\n", output_name_c, font_size);
+	fprintf(h, "#endif /* _FONTEM_%s_%d%s_H */\n",
+		output_name_c, font_size, append_sane);
 	free(output_name_c);
 	fclose(h);
 	fclose(c);
@@ -259,7 +280,7 @@ int main(int argc, const char *argv[])
 	return 0;
 }
 
-static char get_class(unsigned char c)
+static inline char get_class(unsigned char c)
 {
 	if (c == 0)
 		return 1;
@@ -269,49 +290,54 @@ static char get_class(unsigned char c)
 		return 3;
 }
 
-static unsigned char * rle_compress(const unsigned char * data, size_t * length)
+static unsigned char *rle_compress(const unsigned char *data, size_t *length)
 {
 	size_t in_length = *length, out_length = 0;
-	unsigned char * result = (unsigned char *)malloc(2*in_length);
-	char class = 0, count = 0;
-	
+	unsigned char *result = (unsigned char *)malloc(2 * in_length);
+	unsigned char class = 0, count = 0;
+
 	for (size_t i = 0; i <= in_length; i++) {
-		unsigned char c = data[i], c_class = i == in_length ? 0 : get_class(c);
+		unsigned char c = data[i];
+		unsigned char c_class = (i == in_length ? 0 : get_class(c));
+
 		if (((count > 0) && (class != c_class)) || (count >= 0x40)) {
-			if (class == 3) { 
-				result[out_length++] = count - 1;
+			if (class == 3) {
+				result[out_length] = count - 1;
+				out_length++;
+
 				memcpy(result + out_length, data + i - count, count);
 				out_length += count;
-			}
-			else {
-				result[out_length++] = (class == 1 ? 0x80 : 0xc0) + count - 1;
+			} else {
+				result[out_length] = (class == 1 ? 0x80 : 0xc0) + count - 1;
+				out_length++;
 			}
 			count = 0;
 		}
 		class = c_class;
 		count++;
 	}
-	
+
 	*length = out_length;
 	return result;
 }
 
-static void store_bitmap(FILE * c, FT_Bitmap * bitmap, char * bname, wchar_t ch, int compress)
+static void store_bitmap(FILE *c, FT_Bitmap *bitmap, char *bname, wchar_t ch, int compress)
 {
 	if (bitmap->rows && bitmap->width) {
 		fprintf(c, "/** Bitmap definition for character '%s'. */\n", mb(ch));
-		fprintf(c, "static const uint8_t %s[] %s= {\n", bname, get_section(bname));
+		fprintf(c, "static const uint8_t %s[] %s= {\n\t", bname, get_section(bname));
 		if (compress) {
-			size_t length = bitmap->rows * bitmap->width;
-			unsigned char * compressed_data = rle_compress(bitmap->buffer, &length);
+			size_t length = (size_t)bitmap->rows * (size_t)bitmap->width;
+			unsigned char *compressed_data = rle_compress(bitmap->buffer, &length);
 			for (size_t i = 0; i < length; i++) {
 				fprintf(c, "0x%02x, ", compressed_data[i]);
-				if ((i % 16 == 15) || (i == length - 1))
+				if (i == length - 1)
 					fprintf(c, "\n");
+				else if ((i % 16) == 15)
+					fprintf(c, "\n\t");
 			}
 			free(compressed_data);
-		}
-		else {
+		} else {
 			for (unsigned int y = 0; y < bitmap->rows; y++) {
 				fprintf(c, "\t");
 				for (unsigned int x = 0; x < bitmap->width; x++)

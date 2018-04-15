@@ -22,17 +22,19 @@ int main(int argc, const char *argv[])
 	char *font_name = "DejaVu Serif";
 	char *font_style = NULL;
 	int font_size = 10;
+	int font_rle = -1;
 	int width = -1;
 	int height = -1;
 
 	struct poptOption opts[] = {
-		{ "text",      't', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &string,     1, "String to render",	     "text"  },
-		{ "fontname",  'f', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_name,  1, "Name of the font to use",  "font"  },
-		{ "fontstyle", 'S', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_style, 1, "Style of the font to use", "style" },
-		{ "fontsize",  's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &font_size,  1, "Size of the fonr to use",  "pts"   },
-		{ "width",     'w', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &width,      1, "Canvas width",	     "chars" },
-		{ "height",    'h', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &height,     1, "Canvas height",	     "chars" },
-		{ "list",      'l', 0,						 NULL,	      2, "List available fonts",     NULL    },
+		{ "text",      't', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &string,     1, "String to render",		       "text"  },
+		{ "fontname",  'f', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_name,  1, "Name of the font to use",	       "font"  },
+		{ "fontstyle", 'S', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &font_style, 1, "Style of the font to use",	       "style" },
+		{ "fontsize",  's', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &font_size,  1, "Size of the fonr to use",	       "pts"   },
+		{ "fontrle",   'r', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &font_rle,   1, "0 = no RLE, 1 = RLE only, -1 = any", "mode"  },
+		{ "width",     'w', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &width,      1, "Canvas width",		       "chars" },
+		{ "height",    'h', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &height,     1, "Canvas height",		       "chars" },
+		{ "list",      'l', 0,						 NULL,	      2, "List available fonts",	       NULL    },
 		POPT_AUTOHELP
 		POPT_TABLEEND
 	};
@@ -60,7 +62,7 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
-	const struct font *font = font_find(font_name, font_style, font_size);
+	const struct font *font = font_find_all(font_name, font_style, font_size, (char)font_rle);
 
 	if (font == NULL) {
 		fprintf(stderr, "ERROR: Unable to find a font matching \"%s\" size \"%d\".\n",
@@ -75,8 +77,8 @@ int main(int argc, const char *argv[])
 		if (height == -1) height = h;
 	}
 
-	uint8_t *canvas = malloc(width * height);
-	memset(canvas, ' ', width * height);
+	uint8_t *canvas = malloc((size_t)width * (size_t)height);
+	memset(canvas, ' ', (size_t)width * (size_t)height);
 
 	char *p = string;
 

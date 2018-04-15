@@ -15,31 +15,49 @@
 
 int font_draw_glyph_L(const struct font *font,
 		      int x, int y, int width, int height,
-		      uint8_t *buf, const struct glyph *g)
+		      uint8_t *buf, const struct glyph *glyph)
 {
-	for (int row = 0; row < g->rows; row++) {
-		int yofs = row + y + (font->ascender - g->top);
+	unsigned int rows = glyph->rows, cols = glyph->cols;
+	const unsigned char *data = glyph->bitmap;
+	unsigned char count = 0, class = 0;
 
-		if (yofs < 0) continue;
-		if (yofs >= height) break;
+	for (unsigned int row = 0; row < rows; row++) {
+		int yofs = row + y + (font->ascender - glyph->top);
 
-		for (int col = 0; col < g->cols; col++) {
-			int xofs = col + x + g->left;
+		for (unsigned int col = 0; col < cols; col++) {
+			int xofs = col + x + glyph->left;
 
-			if (xofs < 0) continue;
-			if (xofs >= width) break;
+			uint8_t val;
+			if (font->compressed) {
+				if (count == 0) {
+					count = (*data & 0x3f) + 1;
+					class = *data >> 6;
+					data++;
+				}
 
-			uint8_t val = g->bitmap[(row * g->cols) + col];
-			uint8_t *pixel = buf + (yofs * width) + xofs;
+				if (class == 0)
+					val = *(data++);
+				else if (class == 3)
+					val = 0xff;
+				else
+					val = 0;
+				count--;
+			} else {
+				val = data[(row * cols) + col];
+			}
 
-			if (val < 64) *pixel = ' ';
-			else if (val < 128) *pixel = '.';
-			else if (val < 192) *pixel = 'x';
-			else *pixel = 'X';
+			if ((yofs >= 0) && (yofs < height) && (xofs >= 0) && (xofs < width)) {
+				uint8_t *pixel = buf + (yofs * width) + xofs;
+
+				if (val < 64) *pixel = ' ';
+				else if (val < 128) *pixel = '.';
+				else if (val < 192) *pixel = '+';
+				else *pixel = 'X';
+			}
 		}
 	}
 
-	return g->advance;
+	return glyph->advance;
 }
 
 int font_draw_char_L(const struct font *font,
