@@ -35,6 +35,9 @@ for i in "${fonts[@]}"; do
 	eval "${ft}" $i -t "\"${str}\"" > "${tmp}"
 	cmp "${tmp}" "${datadir}/${md5sum}" || (
 		echo -n "ERROR: Font failed compare: ${md5sum} $i" >&2;
+		echo "---- ${tmp}";
+		cat "${tmp}";
+		echo "----";
 		exit 1) || rc=1
 done
 
