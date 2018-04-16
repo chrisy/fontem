@@ -10,6 +10,16 @@ if [ -z "${datadir}" ]; then
 fi
 
 fontlist="${datadir}/fontlist"
+
+echo "Fonts in test suite:"
+cat "${fontlist}"
+echo
+echo "Fonts built:"
+"${ft}" -a
+echo
+"${ft}" -l
+echo
+
 readarray fonts < "${fontlist}"
 
 tmp=$(mktemp --suffix fontem)
