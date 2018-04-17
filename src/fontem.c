@@ -339,9 +339,9 @@ static void store_bitmap(FILE *c, FT_Bitmap *bitmap, char *bname, wchar_t ch, in
 			}
 			free(compressed_data);
 		} else {
-			for (unsigned int y = 0; y < bitmap->rows; y++) {
+			for (unsigned int y = 0; y < (unsigned int)bitmap->rows; y++) {
 				fprintf(c, "\t");
-				for (unsigned int x = 0; x < bitmap->width; x++)
+				for (unsigned int x = 0; x < (unsigned int)bitmap->width; x++)
 					fprintf(c, "0x%02x, ", (unsigned char)bitmap->buffer[y * bitmap->width + x]);
 				fprintf(c, "\n");
 			}
