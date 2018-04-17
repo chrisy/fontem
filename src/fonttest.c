@@ -126,7 +126,7 @@ int main(int argc, const char *argv[])
 		if (height == -1) height = h;
 	}
 
-	uint8_t *canvas = malloc((size_t)width * (size_t)height);
+	uint8_t *canvas = malloc(((size_t)width * (size_t)height) + 1);
 	memset(canvas, ' ', (size_t)width * (size_t)height);
 
 	char *p = string;

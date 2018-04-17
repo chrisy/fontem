@@ -1,6 +1,7 @@
 language: c
 script: ./make-all && make test
 sudo: false
+dist: xenial
 addons:
   apt:
     packages:

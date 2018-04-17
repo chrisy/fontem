@@ -145,7 +145,7 @@ int main(int argc, const char *argv[])
 	char *font_name = face->family_name;
 
 	// Open the output files
-	len = strlen(output_dir) + strlen(output_name) + 32;
+	len = strlen(output_dir) + strlen(output_name) + strlen(append) + 32;
 	char *c_name = malloc(len);
 	snprintf(c_name, len, "%s/font-%s-%d%s.c",
 		 output_dir,
@@ -175,7 +175,7 @@ int main(int argc, const char *argv[])
 	if (h_basename == NULL) h_basename = h_name;
 	else h_basename++;
 
-	// Fix output name for begin C identifier
+	// Fix output name for the C identifier
 	char *output_name_c = validate_identifier(output_name);
 
 	// Initial output in the .c file
@@ -325,10 +325,11 @@ static void store_bitmap(FILE *c, FT_Bitmap *bitmap, char *bname, wchar_t ch, in
 {
 	if (bitmap->rows && bitmap->width) {
 		fprintf(c, "/** Bitmap definition for character '%s'. */\n", mb(ch));
-		fprintf(c, "static const uint8_t %s[] %s= {\n\t", bname, get_section(bname));
+		fprintf(c, "static const uint8_t %s[] %s= {\n", bname, get_section(bname));
 		if (compress) {
 			size_t length = (size_t)bitmap->rows * (size_t)bitmap->width;
 			unsigned char *compressed_data = rle_compress(bitmap->buffer, &length);
+			fprintf(c, "\t");
 			for (size_t i = 0; i < length; i++) {
 				fprintf(c, "0x%02x, ", compressed_data[i]);
 				if (i == length - 1)
