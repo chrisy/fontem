@@ -3,10 +3,10 @@ jobs:
   build:
     docker:
       - image: ubuntu:xenial
-      environment:
-        - LANG: en_US.UTF-8
-        - LANGUAGE: en_US
-        - IS_CI: circleci
+    environment:
+      - LANG: en_US.UTF-8
+      - LANGUAGE: en_US
+      - IS_CI: circleci
     steps:
       - run:
           name: Package dependencies
