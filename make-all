@@ -9,38 +9,11 @@
 dir=$(dirname $0)
 cd "${dir}"
 
-# Hack for travis-ci
-if [ "$1" = "travis-ci" ]; then
-	# Travis for the longest time refused to move off the
-	# defunct Ubuntu 16.04 (Trusty). Sadly libfreetype6 in
-	# 16.04 has a bug that causes rendering errors at the low-
-	# resolution our project uses. So, if we're on Travis and
-	# the distribution appears to be Ubuntu 16.04, go fetch
-	# a newer libfreetype and wire it in.
-
-	. /etc/lsb-release
-	# DISTRIB_ID=Ubuntu
-	# DISTRIB_RELEASE=14.04
-
-	#if [ "${DISTRIB_ID}" = Ubuntu -a "${DISTRIB_RELEASE}" = 14.04 ]; then
-	if true; then (
-		rm -rf extra
-		mkdir extra
-		cd extra
-		wget 'http://security.ubuntu.com/ubuntu/pool/main/f/freetype/libfreetype6-dev_2.6.1-0.1ubuntu2.3_amd64.deb'
-		wget 'http://security.ubuntu.com/ubuntu/pool/main/f/freetype/libfreetype6_2.6.1-0.1ubuntu2.3_amd64.deb'
-		dpkg -x libfreetype6-dev_2.6.1-0.1ubuntu2.3_amd64.deb .
-		dpkg -x libfreetype6_2.6.1-0.1ubuntu2.3_amd64.deb .
-		rm -f *.deb
-	) fi
-
-fi
-
 MAKE=make
 which gmake >/dev/null 2>&1 && MAKE=gmake
 export MAKE
 export LD_LIBRARY_PATH=
-MAKE_PARALLEL=-j4
+#MAKE_PARALLEL=-j4  # TODO: make this depend on if it's in CI
 
 do_bootstrap=
 

@@ -46,11 +46,6 @@ if test -d /opt/local/lib; then
   LDFLAGS="$LDFLAGS -L/opt/local/lib"
 fi
 
-$ travis-ci hack
-if test -d extra/usr/lib/x86_64-linux-gnu; then
-    LDFLAGS="-L$(pwd)/extra/usr/lib/x86_64-linux-gnu $LDFLAGS"
-fi
-
 AC_CHECK_LIB([popt], [poptGetContext], [], [AC_MSG_FAILURE([could not find libpopt])])
 AC_CHECK_LIB([freetype], [FT_Init_FreeType], [], [AC_MSG_FAILURE([cannot find FT_Init_FreeType in libfreetype])])
 
@@ -106,13 +101,6 @@ AC_SUBST([cc_inline])
 bdir="${srcdir}"
 if test x"${bdir}" = x'.' ; then
     bdir=$(pwd)
-fi
-#CPPFLAGS="$CPPFLAGS -I${bdir}/include"
-
-# travis-ci hack
-if test -d extra/usr/include; then
-    CPPFLAGS="-I$(pwd)/extra/usr/include $CPPFLAGS"
-    CPPFLAGS="-I$(pwd)/extra/usr/include/freetype2 $CPPFLAGS"
 fi
 
 if test -d /usr/local/include; then
