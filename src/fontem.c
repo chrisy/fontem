@@ -95,6 +95,13 @@ int main(int argc, const char *argv[])
 
 	while ((rc = poptGetNextOpt(ctx)) > 0) {
 		switch (rc) {
+		case 1:
+			/* No-op */
+			break;
+
+		default:
+			fprintf(stderr, "ERROR: Unexpected option value '%d'.\n", rc);
+			return 1;
 		}
 	}
 
