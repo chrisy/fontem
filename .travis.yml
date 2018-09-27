@@ -1,8 +1,0 @@
-language: c
-script: ./make-all
-sudo: false
-addons:
-  apt:
-    packages:
-    - libpopt-dev
-    - libfreetype6-dev

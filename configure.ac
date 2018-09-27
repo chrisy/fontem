@@ -45,6 +45,7 @@ fi
 if test -d /opt/local/lib; then
   LDFLAGS="$LDFLAGS -L/opt/local/lib"
 fi
+
 AC_CHECK_LIB([popt], [poptGetContext], [], [AC_MSG_FAILURE([could not find libpopt])])
 AC_CHECK_LIB([freetype], [FT_Init_FreeType], [], [AC_MSG_FAILURE([cannot find FT_Init_FreeType in libfreetype])])
 
@@ -101,7 +102,7 @@ bdir="${srcdir}"
 if test x"${bdir}" = x'.' ; then
     bdir=$(pwd)
 fi
-#CPPFLAGS="$CPPFLAGS -I${bdir}/include"
+
 if test -d /usr/local/include; then
     CPPFLAGS="$CPPFLAGS -I/usr/local/include"
 fi
@@ -138,6 +139,7 @@ AC_CONFIG_HEADER([include/ac_config.h])
 AC_CONFIG_FILES([Makefile
     include/Makefile
     include/cc_config.h
-    src/Makefile])
+    src/Makefile
+    tests/Makefile])
 AC_OUTPUT
 

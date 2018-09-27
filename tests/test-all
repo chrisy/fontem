@@ -1,0 +1,46 @@
+#!/bin/bash
+
+. params
+
+datadir="$1"
+
+if [ -z "${datadir}" ]; then
+	echo "ERROR: Need a data directory as \$1" >&2
+	exit 1
+fi
+
+fontlist="${datadir}/fontlist"
+
+echo "Fonts in test suite:"
+cat "${fontlist}"
+echo
+echo "Fonts built:"
+"${ft}" -a
+echo
+"${ft}" -l
+echo
+
+readarray fonts < "${fontlist}"
+
+tmp=$(mktemp --suffix fontem)
+cleanup() {
+	rm -f "${tmp}"
+}
+trap cleanup EXIT
+
+rc=0
+for i in "${fonts[@]}"; do
+	md5sum=$(echo $i | md5sum | awk '{print $1}')
+	echo -n "Testing md5=${md5sum} for $i"
+	eval "${ft}" $i -t "\"${str}\"" > "${tmp}"
+	cmp "${tmp}" "${datadir}/${md5sum}" || (
+		echo -n "ERROR: Font failed compare: ${md5sum} $i" >&2;
+		echo "---- ${tmp}";
+		cat "${tmp}";
+		echo "----";
+		exit 1) || rc=1
+done
+
+[ $rc = 0 ] && echo "All fonts passed compare tests."
+
+exit ${rc}

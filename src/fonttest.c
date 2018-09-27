@@ -16,6 +16,51 @@
 #include "resource/fontem.h"
 #include "fonts/font_all.h"
 
+#ifndef EOL
+#define EOL "\n"
+#endif
+
+static void fia_print_table(struct font *font, void *opaque)
+{
+	FILE *out = (FILE *)opaque;
+
+	fprintf(out, "%-20s %-8s %-6d %-6d %-6d %-3c" EOL,
+		font->name,
+		font->style,
+		font->size,
+		font->height,
+		font->ascender + font->descender,
+		font->compressed ? 'Y' : ' ');
+}
+
+/** Dumps a table of all the fonts we know about. */
+static void font_print_all(FILE *out)
+{
+	fprintf(out, "%-20s %-8s %-6s %-6s %-6s %-3s" EOL,
+		"Font name", "Style", "Size",
+		"Vdist", "Height", "RLE");
+	font_iterate_all(fia_print_table, (void *)out);
+}
+
+static void fia_print_args(struct font *font, void *opaque)
+{
+	FILE *out = (FILE *)opaque;
+
+	fprintf(out, "--fontname=\"%s\" --fontstyle=\"%s\" " \
+		"--fontsize=%d --fontrle=%d\n",
+		font->name,
+		font->style,
+		font->size,
+		font->compressed);
+}
+
+/** Dumps the fonttable as a set of args that can be used
+ * with fonttest to invoke that font. */
+static void font_print_args(FILE *out)
+{
+	font_iterate_all(fia_print_args, (void *)out);
+}
+
 int main(int argc, const char *argv[])
 {
 	char *string = "Test";
@@ -35,6 +80,7 @@ int main(int argc, const char *argv[])
 		{ "width",     'w', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &width,      1, "Canvas width",		       "chars" },
 		{ "height",    'h', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,	 &height,     1, "Canvas height",		       "chars" },
 		{ "list",      'l', 0,						 NULL,	      2, "List available fonts",	       NULL    },
+		{ "list-args", 'a', 0,						 NULL,	      3, "List available fonts as shell args", NULL    },
 		POPT_AUTOHELP
 		POPT_TABLEEND
 	};
@@ -46,7 +92,10 @@ int main(int argc, const char *argv[])
 		switch (rc) {
 		case 2:
 			font_print_all(stdout);
-			exit(0);
+			return 0;
+		case 3:
+			font_print_args(stdout);
+			return 0;
 		}
 	}
 
@@ -77,7 +126,7 @@ int main(int argc, const char *argv[])
 		if (height == -1) height = h;
 	}
 
-	uint8_t *canvas = malloc((size_t)width * (size_t)height);
+	uint8_t *canvas = malloc(((size_t)width * (size_t)height) + 1);
 	memset(canvas, ' ', (size_t)width * (size_t)height);
 
 	char *p = string;

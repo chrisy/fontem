@@ -13,7 +13,7 @@ MAKE=make
 which gmake >/dev/null 2>&1 && MAKE=gmake
 export MAKE
 export LD_LIBRARY_PATH=
-MAKE_PARALLEL=-j4
+#MAKE_PARALLEL=-j4  # TODO: make this depend on if it's in CI
 
 do_bootstrap=
 
