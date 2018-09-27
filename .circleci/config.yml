@@ -1,0 +1,16 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: ubuntu:xenial
+    steps:
+      - run:
+          name: Package dependencies
+          command: sudo apt install -y libpopt-dev libfreetype6-dev
+      - checkout
+      - run:
+          name: Build
+          command: ./make-all
+      - run:
+          name: Test
+          command: make test
