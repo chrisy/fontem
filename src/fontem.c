@@ -20,8 +20,11 @@
 #include FT_FREETYPE_H
 
 #define DEFAULT_CHAR_LIST "!@#$%^&*()_+-={}|[]\\:\";'<>?,./`~" \
-	" ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"	\
-	"0123456789" "ÄÖÜßäöü"
+	" " \
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
+	"abcdefghijklmnopqrstuvwxyz" \
+	"0123456789" \
+	"ÄÖÜßäöü"
 
 #define FONT_DPI 100
 
