@@ -1,7 +1,7 @@
 C Font Embedder
 ===============
 
-[![Build Status](https://travis-ci.org/chrisy/fontem.svg?branch=master)](https://travis-ci.org/chrisy/fontem)
+[![Build Status](https://travis-ci.org/chrisy/fontem.svg?branch=master)](https://travis-ci.org/chrisy/fontem) [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/chrisy/fontem.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/chrisy/fontem/context:cpp)
 
 Overview
 --------
@@ -16,17 +16,20 @@ Command line parameters
 -----------------------
 
 ```
-    Usage: fontem [OPTION...]
-      -f, --font=file        Font filename (default: null)
-      -s, --size=integer     Font size (default: 10)
-      -c, --chars=string     List of characters to produce (default: "!@#$%^&*()_+-={}|[]\:";'<>?,./`~ ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
-      -n, --name=file        Output name (without extension) (default: null)
-      -d, --dir=dir          Output directory (default: ".")
-      --rle                  Use RLE compression
+Usage: fontem [OPTION...]
+  -f, --font=file        Font filename (default: null)
+  -s, --size=integer     Font size (default: 10)
+  -c, --chars=string     List of characters to produce (default: "!@#$%^&*()_+-={}|[]\:";'<>?,./`~
+                         ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789ÄÖÜßäöü")
+  -n, --name=file        Output name (without extension) (default: null)
+  -d, --dir=dir          Output directory (default: ".")
+      --section=name     Section for font data
+      --rle=rle          Use RLE compression (default: 0)
+      --append           Append str to filename, structs (default: "")
 
-    Help options:
-      -?, --help             Show this help message
-          --usage            Display brief usage message
+Help options:
+  -?, --help             Show this help message
+      --usage            Display brief usage message
 ```
 
 
@@ -74,6 +77,22 @@ can be installed with:
 ```bash
    sudo apt install libpopt0 libfreetype6
 ```
+
+
+Locale
+------
+
+Fontem does not make use of any localization mechanism to translate diagnostic
+messages, but it does require a working locale to properly interpret wide
+characters; note that several characters that fall outside of ASCII-7 exist in
+the default character set that fontem will generate fonts for.
+
+Some stripped-down systems (such as container images) may need a  `locales`
+package and/or an appropriate `language` package. For English on Ubuntu this
+would require the package `language-pack-en`. On such systems it is likely the
+system locale has not been set, so use of the `LC_ALL` environment variable
+may be required, or configuring the system locale. The page
+https://help.ubuntu.com/community/Locale may provide guidance.
 
 
 License
