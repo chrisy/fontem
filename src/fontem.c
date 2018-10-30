@@ -363,8 +363,8 @@ static void store_bitmap(FILE *c, FT_Bitmap *bitmap, char *bname, wchar_t ch, in
 					unsigned int byte_rows = bitmap->rows / 8;
 					if (bitmap->rows & 7 ) byte_rows++;
 
-					unsigned char *out = malloc(byte_rows * bitmap->width);
-					memset(out,0,byte_rows * bitmap->width);
+					unsigned char *out = malloc((size_t)byte_rows * bitmap->width);
+					memset(out,0, (size_t)byte_rows * bitmap->width);
 
 					unsigned int x,y;
 
@@ -380,9 +380,6 @@ static void store_bitmap(FILE *c, FT_Bitmap *bitmap, char *bname, wchar_t ch, in
 
 							if(bitmap->buffer[s_byte] & s_mask) {
 								out[d_byte] |= 128 >> d_bit;
-								printf("*");
-							} else {
-								printf(" ");
 							}
 						}
 						printf("\n");
