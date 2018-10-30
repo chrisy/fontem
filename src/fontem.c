@@ -32,7 +32,7 @@
 FT_Library library;
 char *section = NULL;
 
-void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, char **post, int *post_len, int *post_count, int with_kerning, wchar_t *char_list, int compress);
+void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph, int ch, int size, char *name, FILE *c, char **post, int *post_len, int *post_count, int with_kerning, wchar_t *char_list, int compress, int rotate, int mono);
 static char *get_section(char *name);
 static int cmp_wchar(const void *p1, const void *p2);
 
@@ -68,6 +68,8 @@ int main(int argc, const char *argv[])
 
 	int len, error;
 	int rle = 0;
+	int rotate = 0;
+	int mono = 0;
 
 	char *font_filename = NULL;
 	char *char_list = strdup(DEFAULT_CHAR_LIST);
@@ -86,6 +88,8 @@ int main(int argc, const char *argv[])
 		{ "section", 0,	  POPT_ARG_STRING,			       &section,       1, "Section for font data",	     "name"    },
 		{ "rle",     0,	  POPT_ARG_VAL | POPT_ARGFLAG_SHOW_DEFAULT,    &rle,	       1, "Use RLE compression",	     "rle"     },
 		{ "append",  0,	  POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &append,	       1, "Append str to filename, structs", ""	       },
+		{ "rotate",  'r',	  POPT_ARG_VAL | POPT_ARGFLAG_SHOW_DEFAULT, &rotate,	       1, "Rotate bitmap by 90 cw", ""	       },
+		{ "mono",  'm',	  POPT_ARG_VAL | POPT_ARGFLAG_SHOW_DEFAULT, &mono,	       1, "Mono typeface", ""	       },
 		POPT_AUTOHELP
 		POPT_TABLEEND
 	};
@@ -237,14 +241,19 @@ int main(int argc, const char *argv[])
 			post_max = ch;
 
 		// Load the glyph
-		error = FT_Load_Char(face, ch, FT_LOAD_RENDER);
+		if(mono) {
+			error = FT_Load_Char(face, ch, FT_LOAD_RENDER | FT_LOAD_TARGET_MONO);	
+		} else {
+			error = FT_Load_Char(face, ch, FT_LOAD_RENDER);
+		}
+		
 		if (error) {
 			fprintf(stderr, "ERROR : Can't load glyph for %s.\n", mb(ch));
 			return 1;
 		}
 
 		store_glyph(&face, face->glyph, ch, font_size, output_name_c, c, &post,
-			    &post_len, &post_count, with_kerning, wide_char_list, rle);
+			    &post_len, &post_count, with_kerning, wide_char_list, rle, rotate, mono);
 	}
 
 	// Finish the post
@@ -331,7 +340,7 @@ static unsigned char *rle_compress(const unsigned char *data, size_t *length)
 	return result;
 }
 
-static void store_bitmap(FILE *c, FT_Bitmap *bitmap, char *bname, wchar_t ch, int compress)
+static void store_bitmap(FILE *c, FT_Bitmap *bitmap, char *bname, wchar_t ch, int compress, int rotate, int mono)
 {
 	if (bitmap->rows && bitmap->width) {
 		fprintf(c, "/** Bitmap definition for character '%s'. */\n", mb(ch));
@@ -349,11 +358,60 @@ static void store_bitmap(FILE *c, FT_Bitmap *bitmap, char *bname, wchar_t ch, in
 			}
 			free(compressed_data);
 		} else {
-			for (unsigned int y = 0; y < (unsigned int)bitmap->rows; y++) {
-				fprintf(c, "\t");
-				for (unsigned int x = 0; x < (unsigned int)bitmap->width; x++)
-					fprintf(c, "0x%02x, ", (unsigned char)bitmap->buffer[y * bitmap->width + x]);
-				fprintf(c, "\n");
+			if(rotate) {
+				if(mono) {
+					unsigned int byte_rows = bitmap->rows / 8;
+					if (bitmap->rows & 7 ) byte_rows++;
+
+					unsigned char *out = malloc(byte_rows * bitmap->width);
+					memset(out,0,byte_rows * bitmap->width);
+
+					unsigned int x,y;
+
+					printf("\n");
+					for(y = 0; y < bitmap->rows; y++) {
+						for(x = 0; x < bitmap->width; x++) {
+							unsigned int s_byte = (x / 8) + (y * bitmap->pitch);
+							unsigned int s_bit = x % 8;
+							unsigned char s_mask = 128 >> s_bit;
+
+							unsigned int d_byte = (y / 8) + (x * byte_rows);
+							unsigned int d_bit = y % 8;
+
+							if(bitmap->buffer[s_byte] & s_mask) {
+								out[d_byte] |= 128 >> d_bit;
+								printf("*");
+							} else {
+								printf(" ");
+							}
+						}
+						printf("\n");
+					}
+
+					for(x = 0; x < bitmap->width; x++) {
+						fprintf(c, "\t");
+						for(y = 0; y < byte_rows; y++) {
+							fprintf(c, "0x%02x, ",  out[x * byte_rows + y]);
+						}
+						fprintf(c, "\n");
+					}
+
+					free(out);
+				} else {
+					for (unsigned int x = 0; x < (unsigned int)bitmap->pitch; x++)  {
+						fprintf(c, "\t");
+						for (unsigned int y = 0; y < (unsigned int)bitmap->rows; y++)	
+							fprintf(c, "0x%02x, ", (unsigned char)bitmap->buffer[y * bitmap->pitch + x]);
+						fprintf(c, "\n");
+					}
+				}
+			} else {
+				for (unsigned int y = 0; y < (unsigned int)bitmap->rows; y++) {
+					fprintf(c, "\t");
+					for (unsigned int x = 0; x < (unsigned int)bitmap->pitch; x++)
+						fprintf(c, "0x%02x, ", (unsigned char)bitmap->buffer[y * bitmap->pitch + x]);
+					fprintf(c, "\n");
+				}
 			}
 		}
 		fprintf(c, "};\n\n");
@@ -365,7 +423,7 @@ static void store_bitmap(FILE *c, FT_Bitmap *bitmap, char *bname, wchar_t ch, in
 void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 		 wchar_t ch, int size, char *name,
 		 FILE *c, char **post, int *post_len, int *post_count,
-		 int with_kerning, wchar_t *char_list, int compress)
+		 int with_kerning, wchar_t *char_list, int compress, int rotate, int mono)
 {
 	FT_Bitmap *bitmap = &glyph->bitmap;
 
@@ -380,7 +438,7 @@ void store_glyph(FT_Face *face, FT_GlyphSlotRec *glyph,
 	snprintf(kname, len, "kerning_%s_%d_%04x", name, size, ch);
 
 	// Generate the bitmap
-	store_bitmap(c, bitmap, bname, ch, compress);
+	store_bitmap(c, bitmap, bname, ch, compress, rotate, mono);
 
 	// Generate the kerning table
 	if (with_kerning) {
