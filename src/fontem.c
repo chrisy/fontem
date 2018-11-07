@@ -88,8 +88,8 @@ int main(int argc, const char *argv[])
 		{ "section", 0,	  POPT_ARG_STRING,			       &section,       1, "Section for font data",	     "name"    },
 		{ "rle",     0,	  POPT_ARG_VAL | POPT_ARGFLAG_SHOW_DEFAULT,    &rle,	       1, "Use RLE compression",	     "rle"     },
 		{ "append",  0,	  POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &append,	       1, "Append str to filename, structs", ""	       },
-		{ "rotate",  'r',	  POPT_ARG_VAL | POPT_ARGFLAG_SHOW_DEFAULT, &rotate,	       1, "Rotate bitmap by 90 cw", ""	       },
-		{ "mono",  'm',	  POPT_ARG_VAL | POPT_ARGFLAG_SHOW_DEFAULT, &mono,	       1, "Mono typeface", ""	       },
+		{ "rotate",  'r', POPT_ARG_VAL | POPT_ARGFLAG_SHOW_DEFAULT,    &rotate,	       1, "Rotate bitmap by 90 cw",	     ""	       },
+		{ "mono",    'm', POPT_ARG_VAL | POPT_ARGFLAG_SHOW_DEFAULT,    &mono,	       1, "Mono typeface",		     ""	       },
 		POPT_AUTOHELP
 		POPT_TABLEEND
 	};
@@ -241,12 +241,11 @@ int main(int argc, const char *argv[])
 			post_max = ch;
 
 		// Load the glyph
-		if(mono) {
-			error = FT_Load_Char(face, ch, FT_LOAD_RENDER | FT_LOAD_TARGET_MONO);	
-		} else {
+		if (mono)
+			error = FT_Load_Char(face, ch, FT_LOAD_RENDER | FT_LOAD_TARGET_MONO);
+		else
 			error = FT_Load_Char(face, ch, FT_LOAD_RENDER);
-		}
-		
+
 		if (error) {
 			fprintf(stderr, "ERROR : Can't load glyph for %s.\n", mb(ch));
 			return 1;
@@ -257,12 +256,12 @@ int main(int argc, const char *argv[])
 	}
 
 	// Finish the post
-	fprintf(c, "%s"	\
+	fprintf(c, "%s" \
 		"};\n\n", post);
 	free(post);
 
 	fprintf(c, "/** Definition for font \"%s\". */\n", font_name);
-	fprintf(c, "const struct font font_%s_%d%s %s= {\n"	\
+	fprintf(c, "const struct font font_%s_%d%s %s= {\n"     \
 		"\t.name = \"%s\",\n" \
 		"\t.style = \"%s\",\n" \
 		"\t.size = %d,\n" \
@@ -272,8 +271,8 @@ int main(int argc, const char *argv[])
 		"\t.ascender = %d,\n" \
 		"\t.descender = %d,\n" \
 		"\t.height = %d,\n" \
-		"\t.glyphs = glyphs_%s_%d%s,\n"	\
-		"\t.compressed = %u,\n"	\
+		"\t.glyphs = glyphs_%s_%d%s,\n" \
+		"\t.compressed = %u,\n" \
 		"};\n\n",
 		output_name_c, font_size, append_sane,
 		get_section(output_name_c),
@@ -358,19 +357,19 @@ static void store_bitmap(FILE *c, FT_Bitmap *bitmap, char *bname, wchar_t ch, in
 			}
 			free(compressed_data);
 		} else {
-			if(rotate) {
-				if(mono) {
+			if (rotate) {
+				if (mono) {
 					unsigned int byte_rows = bitmap->rows / 8;
-					if (bitmap->rows & 7 ) byte_rows++;
+					if (bitmap->rows & 7) byte_rows++;
 
 					unsigned char *out = malloc((size_t)byte_rows * bitmap->width);
-					memset(out,0, (size_t)byte_rows * bitmap->width);
+					memset(out, 0, (size_t)byte_rows * bitmap->width);
 
-					unsigned int x,y;
+					unsigned int x, y;
 
 					printf("\n");
-					for(y = 0; y < bitmap->rows; y++) {
-						for(x = 0; x < bitmap->width; x++) {
+					for (y = 0; y < bitmap->rows; y++) {
+						for (x = 0; x < bitmap->width; x++) {
 							unsigned int s_byte = (x / 8) + (y * bitmap->pitch);
 							unsigned int s_bit = x % 8;
 							unsigned char s_mask = 128 >> s_bit;
@@ -378,26 +377,24 @@ static void store_bitmap(FILE *c, FT_Bitmap *bitmap, char *bname, wchar_t ch, in
 							unsigned int d_byte = (y / 8) + (x * byte_rows);
 							unsigned int d_bit = y % 8;
 
-							if(bitmap->buffer[s_byte] & s_mask) {
+							if (bitmap->buffer[s_byte] & s_mask)
 								out[d_byte] |= 128 >> d_bit;
-							}
 						}
 						printf("\n");
 					}
 
-					for(x = 0; x < bitmap->width; x++) {
+					for (x = 0; x < bitmap->width; x++) {
 						fprintf(c, "\t");
-						for(y = 0; y < byte_rows; y++) {
-							fprintf(c, "0x%02x, ",  out[x * byte_rows + y]);
-						}
+						for (y = 0; y < byte_rows; y++)
+							fprintf(c, "0x%02x, ", out[x * byte_rows + y]);
 						fprintf(c, "\n");
 					}
 
 					free(out);
 				} else {
-					for (unsigned int x = 0; x < (unsigned int)bitmap->pitch; x++)  {
+					for (unsigned int x = 0; x < (unsigned int)bitmap->pitch; x++) {
 						fprintf(c, "\t");
-						for (unsigned int y = 0; y < (unsigned int)bitmap->rows; y++)	
+						for (unsigned int y = 0; y < (unsigned int)bitmap->rows; y++)
 							fprintf(c, "0x%02x, ", (unsigned char)bitmap->buffer[y * bitmap->pitch + x]);
 						fprintf(c, "\n");
 					}
